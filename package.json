@@ -1,0 +1,19 @@
+{
+  "name": "flakeaway",
+  "version": "0.0.0",
+  "main": "src/flakeaway.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danth/flakeaway.git"
+  },
+  "author": "Daniel Thwaites",
+  "bugs": {
+    "url": "https://github.com/danth/flakeaway/issues"
+  },
+  "homepage": "https://github.com/danth/flakeaway#readme",
+  "dependencies": {
+    "@octokit/app": "^12.0.3",
+    "@octokit/rest": "^18.9.0",
+    "lodash": "^4.17.21"
+  }
+}
