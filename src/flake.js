@@ -78,16 +78,17 @@ function getPaths(tree) {
 function getBuildableFragments(tree) {
 	const fragments = []
 
-	const checks = findChild(tree, "checks")
-	if (checks) fragments.push(checks)
-
-	const packages = findChild(tree, "packages")
-	if (packages) fragments.push(packages)
+	for (let outputName of ["checks", "packages"]) {
+		const output = findChild(tree, outputName)
+		if (output) getPaths(output).forEach(path => fragments.push(path))
+	}
 
 	const nixosConfigurations = findChild(tree, "nixosConfigurations")
-	if (nixosConfigurations) fragments.push(nixosConfigurations)
+	if (nixosConfigurations) getPaths(nixosConfigurations).forEach(
+		path => fragments.push(`${path}.config.system.build.toplevel`)
+	)
 
-	return _.flatMap(fragments, getPaths)
+	return fragments
 }
 
 module.exports = { readFlake, getBuildableFragments }
