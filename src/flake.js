@@ -60,11 +60,6 @@ async function readFlake(url) {
 	return parse(stdout)
 }
 
-async function readFlakeGithub(owner, repo, token, revision) {
-	const url = `git+https://oauth2:${token}@github.com/${owner}/${repo}.git?rev=${revision}`
-	return await readFlake(url)
-}
-
 function findChild(tree, name) {
 	return _.find(tree.children, child => child.name == name)
 }
@@ -95,4 +90,4 @@ function getBuildableFragments(tree) {
 	return _.flatMap(fragments, getPaths)
 }
 
-module.exports = { readFlake, readFlakeGithub, getBuildableFragments }
+module.exports = { readFlake, getBuildableFragments }

@@ -1,7 +1,9 @@
 const fs = require('fs')
+const async = require('async')
+const { v4: uuidv4 } = require('uuid')
 const { Octokit } = require("@octokit/rest")
 const { App, createNodeMiddleware } = require('@octokit/app')
-const { readFlakeGithub, getBuildableFragments } = require('./flake.js')
+const { readFlake, getBuildableFragments } = require('./flake.js')
 
 const privateKey = fs.readFileSync(process.env.PRIVATE_KEY_FILE)
 const app = new App({
@@ -20,73 +22,92 @@ const app = new App({
 app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
+const queue = async.queue(
+  (task, completed) => completed(runEvaluation(task)),
+  1
+)
+
 async function createCheck({ octokit, payload }) {
   const owner = payload.repository.owner.login
   const repo = payload.repository.name
+  const head_sha = payload.check_suite
+                 ? payload.check_suite.head_sha
+                 : payload.check_run.head_sha
 
-  console.log(`Creating check for ${owner}/${repo}`)
-  await octokit.rest.checks.create({
+  const id = uuidv4()
+
+  const check_run = await octokit.rest.checks.create({
     owner,
     repo,
-    head_sha: payload.check_suite
-      ? payload.check_suite.head_sha
-      : payload.check_run.sha,
+    head_sha,
+    external_id: id,
     name: 'Evaluate Flake',
-    status: 'in_progress',
+    status: 'queued',
   })
-  console.log(`Created check for ${owner}/${repo}`)
+
+  queue.push({
+    type: 'evaulation',
+    id,
+    check_run_id: check_run.data.id,
+    repository: payload.repository,
+    head_sha,
+    octokit,
+  })
+
+  console.log(`Created evaluation ${id} for ${owner}/${repo}`)
 }
 
-async function updateCheck({ octokit, payload }) {
-  const owner = payload.repository.owner.login
-  const repo = payload.repository.name
-
-  console.log(`Retrieving token for ${owner}/${repo}`)
+async function readFlakeGithub(octokit, repository, revision) {
   const { token } = await octokit.auth({
     type: 'installation',
-    repositoryIds: [payload.repository.id],
+    repositoryIds: [repository.id],
     permissions: { contents: 'read' },
   })
+  const owner = repository.owner.login
+  const repo = repository.name
 
-  console.log(`Evaluating ${owner}/${repo}`)
+	const url = `git+https://oauth2:${token}@github.com/${owner}/${repo}.git?rev=${revision}`
+  return await readFlake(url)
+}
+
+async function runEvaluation({ id, check_run_id, repository, head_sha, octokit }) {
+  console.log(`Running evaluation ${id}`)
+
+  const owner = repository.owner.login
+  const repo = repository.name
+
+  await octokit.rest.checks.update({
+    owner, repo, check_run_id,
+    status: 'in_progress',
+  })
+
   let flake
   try {
-    flake = await readFlakeGithub(owner, repo, token, payload.check_run.head_sha)
+    flake = await readFlakeGithub(octokit, repository, head_sha)
   } catch (error) {
-    console.warn(`Failed to evaluate ${owner}/${repo}`)
     console.warn(error)
+    console.warn(`Failed to evaluate ${id}`)
     await octokit.rest.checks.update({
-      owner,
-      repo,
-      check_run_id: payload.check_run.id,
+      owner, repo, check_run_id,
       status: 'completed',
       conclusion: 'failure',
     })
-    console.log(`Marked ${owner}/${repo} as failure`)
     return
   }
 
-  console.log(`Getting fragments for ${owner}/${repo}`)
   const fragments = getBuildableFragments(flake)
 
-  console.log(`Finished evaluating ${owner}/${repo}`)
   await octokit.rest.checks.update({
-    owner,
-    repo,
-    check_run_id: payload.check_run.id,
+    owner, repo, check_run_id,
     status: 'completed',
     conclusion: 'success',
   })
-  console.log(`Marked ${owner}/${repo} as success`)
+
+  console.log(`Finished evaluation ${id}`)
 }
 
 app.webhooks.on('check_suite.requested', createCheck)
 app.webhooks.on('check_suite.rerequested', createCheck)
-
-app.webhooks.on('check_run.created', async ({ octokit, payload }) => {
-  if (payload.check_run.app.id != process.env.APP_ID) return
-  await updateCheck({ octokit, payload })
-})
 app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
   if (payload.check_run.app.id != process.env.APP_ID) return
   await createCheck({ octokit, payload })
