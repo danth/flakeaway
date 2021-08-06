@@ -1,5 +1,4 @@
 const fs = require('fs')
-const async = require('async')
 const util = require('util')
 const execFile = util.promisify(require('child_process').execFile)
 const { v4: uuidv4 } = require('uuid')
@@ -21,18 +20,21 @@ const app = new App({
   Octokit
 })
 
+const queues = require('queuey')('/var/lib/flakeaway/queue.json')
+
 app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
-const queue = async.queue(
-  async (task, completed) => {
+const queue = queues.queue({
+  name: 'jobs',
+  worker: task => {
     if (task.type == 'evaluation') {
-      completed(await runEvaluation(task))
+      return runEvaluation(task)
     } else {
-      completed(await runBuild(task))
+      return runBuild(task)
     }
   }
-)
+})
 
 async function createEvaluation({ octokit, payload }) {
   const owner = payload.repository.owner.login
@@ -50,19 +52,19 @@ async function createEvaluation({ octokit, payload }) {
     status: 'queued',
   })
 
-  queue.push({
+  queue.enqueue({
     type: 'evaluation',
     id,
+    installation_id: payload.installation.id,
     check_run_id: check_run.data.id,
     repository: payload.repository,
     head_sha,
-    octokit,
   })
 
   console.log(`Created evaluation ${id} for ${owner}/${repo}`)
 }
 
-async function createBuild({ octokit, repository, head_sha, fragment }) {
+async function createBuild({ octokit, installation_id, repository, head_sha, fragment }) {
   const id = uuidv4()
 
   const check_run = await octokit.rest.checks.create({
@@ -74,14 +76,14 @@ async function createBuild({ octokit, repository, head_sha, fragment }) {
     status: 'queued',
   })
 
-  queue.push({
+  queue.enqueue({
     type: 'build',
     id,
     check_run_id: check_run.data.id,
+    installation_id,
     repository,
     head_sha,
     fragment,
-    octokit,
   })
 
   console.log(`Created build ${id}`)
@@ -104,8 +106,10 @@ async function readFlakeGithub(octokit, repository, revision) {
   return await readFlake(url)
 }
 
-async function runEvaluation({ id, check_run_id, repository, head_sha, octokit }) {
+async function runEvaluation({ id, check_run_id, installation_id, repository, head_sha }) {
   console.log(`Running evaluation ${id}`)
+
+  const octokit = await app.getInstallationOctokit(installation_id)
 
   const owner = repository.owner.login
   const repo = repository.name
@@ -138,14 +142,16 @@ async function runEvaluation({ id, check_run_id, repository, head_sha, octokit }
   })
 
   await Promise.all(fragments.map(
-    fragment => createBuild({ octokit, repository, head_sha, fragment })
+    fragment => createBuild({ octokit, installation_id, repository, head_sha, fragment })
   ))
 
   console.log(`Finished evaluation ${id}`)
 }
 
-async function runBuild({ id, check_run_id, repository, head_sha, fragment, octokit }) {
+async function runBuild({ id, check_run_id, installation_id, repository, head_sha, fragment }) {
   console.log(`Running build ${id}`)
+
+  const octokit = await app.getInstallationOctokit(installation_id)
 
   const owner = repository.owner.login
   const repo = repository.name
