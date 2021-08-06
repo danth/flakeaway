@@ -2,6 +2,9 @@
   "name": "flakeaway",
   "version": "0.0.0",
   "main": "src/flakeaway.js",
+  "bin": {
+    "flakeaway": "src/flakeaway.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/danth/flakeaway.git"
