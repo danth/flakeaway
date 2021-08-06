@@ -25,14 +25,13 @@ app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
 const queue = async.queue(
-  (task, completed) => {
+  async (task, completed) => {
     if (task.type == 'evaluation') {
-      completed(runEvaluation(task))
+      completed(await runEvaluation(task))
     } else {
-      completed(runBuild(task))
+      completed(await runBuild(task))
     }
-  },
-  1
+  }
 )
 
 async function createEvaluation({ octokit, payload }) {
