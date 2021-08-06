@@ -1,6 +1,7 @@
 const fs = require('fs')
 const util = require('util')
 const execFile = util.promisify(require('child_process').execFile)
+const _ = require('lodash')
 const { v4: uuidv4 } = require('uuid')
 const { Octokit } = require("@octokit/rest")
 const { App, createNodeMiddleware } = require('@octokit/app')
@@ -159,6 +160,31 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
   console.log(`Finished evaluation ${id}`)
 }
 
+function formatLog(stdout) {
+  const truncatedMessage = 'Earlier lines of this build log were truncated.\n'
+  const limit = 65535 - 8 - truncatedMessage.length
+
+  // Remove ANSI escape sequences
+  const log = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+
+  const logLines = log.split('\n')
+
+  var totalLength = 0
+  const truncatedLines = _.takeRightWhile(
+    logLines,
+    line => {
+      totalLength += line.length + 1
+      return totalLength <= limit
+    }
+  )
+
+  const truncatedLog = truncatedLines.join('\n')
+
+  const prefix = truncatedLines.length < logLines.length ? truncatedMessage : ''
+
+  return prefix + '```\n' + truncatedLog + '\n```'
+}
+
 async function buildFragment(url, fragment) {
   const { stdout: drvPath } = await execFile(
     "nix", ["eval", "--raw", `${url}#${fragment}`, "--apply", "output: output.drvPath"]
@@ -178,11 +204,7 @@ async function buildFragment(url, fragment) {
   }
 
   if (stdout.length) {
-    // Remove ANSI escape sequences
-    const cleanStdout = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
-
-    const log = '```\n' + cleanStdout + '\n```'
-    return { success, log }
+    return { success, log: formatLog(stdout) }
   }
 
   return { success }
