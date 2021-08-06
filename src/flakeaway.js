@@ -178,7 +178,10 @@ async function buildFragment(url, fragment) {
   }
 
   if (stdout.length) {
-    const log = '```\n' + stdout + '\n```'
+    // Remove ANSI escape sequences
+    const cleanStdout = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+
+    const log = '```\n' + cleanStdout + '\n```'
     return { success, log }
   }
 
