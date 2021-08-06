@@ -49,8 +49,9 @@ async function updateCheck({ octokit, payload }) {
   })
 
   console.log(`Evaluating ${owner}/${repo}`)
+  let flake
   try {
-    const flake = await readFlakeGithub(owner, repo, token, payload.check_run.head_sha)
+    flake = await readFlakeGithub(owner, repo, token, payload.check_run.head_sha)
   } catch (error) {
     console.warn(`Failed to evaluate ${owner}/${repo}`)
     console.warn(error)
