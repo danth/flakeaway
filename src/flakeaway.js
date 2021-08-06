@@ -119,9 +119,8 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
     status: 'in_progress',
   })
 
-  let flake
   try {
-    flake = await readFlakeGithub(octokit, repository, head_sha)
+    var flake = await readFlakeGithub(octokit, repository, head_sha)
   } catch (error) {
     console.warn(error)
     console.warn(`Failed to evaluate ${id}`)
@@ -129,6 +128,11 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
       owner, repo, check_run_id,
       status: 'completed',
       conclusion: 'failure',
+      output: {
+        title: 'Evaluation failed',
+        summary: 'There was an error during evaluation of `flake.nix`.',
+        text: '```\n' + error.stderr + '\n```'
+      }
     })
     return
   }
@@ -139,6 +143,13 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
     owner, repo, check_run_id,
     status: 'completed',
     conclusion: 'success',
+    output: {
+      title: 'Evaluation succeeded',
+      summary: (
+        `These ${fragments.length} fragments will be built:\n` +
+        fragments.map(fragment => `- ${fragment}`).join('\n')
+      )
+    }
   })
 
   await Promise.all(fragments.map(
@@ -146,6 +157,32 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
   ))
 
   console.log(`Finished evaluation ${id}`)
+}
+
+async function buildFragment(url, fragment) {
+  const { stdout: drvPath } = await execFile(
+    "nix", ["eval", "--raw", `${url}#${fragment}`, "--apply", "output: output.drvPath"]
+  )
+
+  var success = true
+  try {
+    await execFile("nix", ["build", drvPath, "--no-link"])
+  } catch (error) {
+    success = false
+  }
+
+  try {
+    var { stdout } = await execFile("nix", ["log", drvPath])
+  } catch (error) {
+    return { success }
+  }
+
+  if (stdout.length) {
+    const log = '```\n' + stdout + '\n```'
+    return { success, log }
+  }
+
+  return { success }
 }
 
 async function runBuild({ id, check_run_id, installation_id, repository, head_sha, fragment }) {
@@ -162,26 +199,33 @@ async function runBuild({ id, check_run_id, installation_id, repository, head_sh
   })
 
   const url = await flakeUrl(octokit, repository, head_sha)
-  try {
-    await execFile("nix", ["build", `${url}#${fragment}`, "--no-link"])
-  } catch (error) {
-    console.warn(error)
-    console.warn(`Failed to build ${id}`)
+  const { success, log } = await buildFragment(url, fragment)
+
+  if (success) {
+    await octokit.rest.checks.update({
+      owner, repo, check_run_id,
+      status: 'completed',
+      conclusion: 'success',
+      output: {
+        title: 'Build succeeded',
+        summary: 'This fragment was built or substituted successfully.',
+        text: log
+      }
+    })
+    console.log(`Finished build ${id}`)
+  } else {
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
       status: 'completed',
       conclusion: 'failure',
+      output: {
+        title: 'Build failed',
+        summary: 'There was an error during the build or substitution of this fragment.',
+        text: log
+      }
     })
-    return
+    console.log(`Failed to build ${id}`)
   }
-
-  await octokit.rest.checks.update({
-    owner, repo, check_run_id,
-    status: 'completed',
-    conclusion: 'success',
-  })
-
-  console.log(`Finished build ${id}`)
 }
 
 app.webhooks.on('check_suite.requested', createEvaluation)
