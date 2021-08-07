@@ -37,6 +37,17 @@ const queue = queues.queue({
   }
 })
 
+async function getSuppportedSystems() {
+  const { stdout } = await execFile('nix', ['show-config', '--json'])
+  const config = JSON.parse(stdout)
+
+  const { stdout: currentSystem } = await execFile(
+    'nix', ['eval', '--expr', 'builtins.currentSystem', '--raw', '--impure']
+  )
+
+  return [currentSystem, ...config["extra-platforms"].value]
+}
+
 async function createEvaluation({ octokit, payload }) {
   const owner = payload.repository.owner.login
   const repo = payload.repository.name
@@ -186,9 +197,29 @@ function formatLog(stdout) {
 }
 
 async function buildFragment(url, fragment) {
-  const { stdout: drvPath } = await execFile(
-    "nix", ["eval", "--raw", `${url}#${fragment}`, "--apply", "output: output.drvPath"]
-  )
+  function addLog(obj, log) {
+    if (log) return { log: formatLog(log), ...obj }
+    return obj
+  }
+
+  try {
+    var { stdout: metadata } = await execFile("nix", [
+      "eval",
+      `${url}#${fragment}`,
+      "--apply",
+      "output: { inherit (output) system drvPath; }",
+      "--json"
+    ])
+  } catch (error) {
+    return addLog({ success: false, skipped: false }, error.stderr)
+  }
+  const { system, drvPath } = JSON.parse(metadata)
+
+  // TODO: Don't reload supported systems for each build
+  const supportedSystems = await getSuppportedSystems()
+  if (!supportedSystems.includes(system)) {
+    return { success: false, skipped: true }
+  }
 
   var success = true
   try {
@@ -200,14 +231,9 @@ async function buildFragment(url, fragment) {
   try {
     var { stdout } = await execFile("nix", ["log", drvPath])
   } catch (error) {
-    return { success }
+    return { success, skipped: false }
   }
-
-  if (stdout.length) {
-    return { success, log: formatLog(stdout) }
-  }
-
-  return { success }
+  return addLog({ success, skipped: false }, stdout)
 }
 
 async function runBuild({ id, check_run_id, installation_id, repository, head_sha, fragment }) {
@@ -224,7 +250,8 @@ async function runBuild({ id, check_run_id, installation_id, repository, head_sh
   })
 
   const url = await flakeUrl(octokit, repository, head_sha)
-  const { success, log } = await buildFragment(url, fragment)
+
+  const { success, skipped, log } = await buildFragment(url, fragment)
 
   if (success) {
     await octokit.rest.checks.update({
@@ -238,6 +265,18 @@ async function runBuild({ id, check_run_id, installation_id, repository, head_sh
       }
     })
     console.log(`Finished build ${id}`)
+  } else if (skipped) {
+    await octokit.rest.checks.update({
+      owner, repo, check_run_id,
+      status: 'completed',
+      conclusion: 'skipped',
+      output: {
+        title: 'Build unavailable',
+        summary: 'This fragment cannot be built as it requires a platform which is not supported.',
+        text: log
+      }
+    })
+    console.log(`Skipped build ${id}`)
   } else {
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
