@@ -53,7 +53,10 @@ async function createEvaluation({ octokit, payload }) {
   const repo = payload.repository.name
   const head_sha = payload.check_suite
                  ? payload.check_suite.head_sha
-                 : payload.check_run.head_sha
+                 : payload.check_run.check_suite.head_sha
+  const head_branch = payload.check_suite
+                    ? payload.check_suite.head_branch
+                    : payload.check_run.check_suite.head_branch
 
   const id = uuidv4()
 
@@ -70,19 +73,22 @@ async function createEvaluation({ octokit, payload }) {
     installation_id: payload.installation.id,
     check_run_id: check_run.data.id,
     repository: payload.repository,
-    head_sha,
+    head: {
+      commit: head_sha,
+      branch: head_branch,
+    },
   })
 
   console.log(`Created evaluation ${id} for ${owner}/${repo}`)
 }
 
-async function createBuild({ octokit, installation_id, repository, head_sha, fragment }) {
+async function createBuild({ octokit, installation_id, repository, head, fragment }) {
   const id = uuidv4()
 
   const check_run = await octokit.rest.checks.create({
     owner: repository.owner.login,
     repo: repository.name,
-    head_sha,
+    head_sha: head.commit,
     external_id: id,
     name: `Build ${fragment}`,
     status: 'queued',
@@ -94,14 +100,14 @@ async function createBuild({ octokit, installation_id, repository, head_sha, fra
     check_run_id: check_run.data.id,
     installation_id,
     repository,
-    head_sha,
+    head,
     fragment,
   })
 
   console.log(`Created build ${id}`)
 }
 
-async function flakeUrl(octokit, repository, revision) {
+async function flakeUrl(octokit, repository, { branch, commit }) {
   const { token } = await octokit.auth({
     type: 'installation',
     repositoryIds: [repository.id],
@@ -110,15 +116,15 @@ async function flakeUrl(octokit, repository, revision) {
   const owner = repository.owner.login
   const repo = repository.name
 
-	return `git+https://oauth2:${token}@github.com/${owner}/${repo}.git?rev=${revision}`
+	return `git+https://oauth2:${token}@github.com/${owner}/${repo}.git?ref=${branch}&rev=${commit}`
 }
 
-async function readFlakeGithub(octokit, repository, revision) {
-  const url = await flakeUrl(octokit, repository, revision)
+async function readFlakeGithub(octokit, repository, head) {
+  const url = await flakeUrl(octokit, repository, head)
   return await readFlake(url)
 }
 
-async function runEvaluation({ id, check_run_id, installation_id, repository, head_sha }) {
+async function runEvaluation({ id, check_run_id, installation_id, repository, head }) {
   console.log(`Running evaluation ${id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
@@ -132,7 +138,7 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
   })
 
   try {
-    var flake = await readFlakeGithub(octokit, repository, head_sha)
+    var flake = await readFlakeGithub(octokit, repository, head)
   } catch (error) {
     console.warn(error)
     console.warn(`Failed to evaluate ${id}`)
@@ -165,7 +171,7 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
   })
 
   await Promise.all(fragments.map(
-    fragment => createBuild({ octokit, installation_id, repository, head_sha, fragment })
+    fragment => createBuild({ octokit, installation_id, repository, head, fragment })
   ))
 
   console.log(`Finished evaluation ${id}`)
@@ -236,7 +242,7 @@ async function buildFragment(url, fragment) {
   return addLog({ success, skipped: false }, stdout)
 }
 
-async function runBuild({ id, check_run_id, installation_id, repository, head_sha, fragment }) {
+async function runBuild({ id, check_run_id, installation_id, repository, head, fragment }) {
   console.log(`Running build ${id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
@@ -249,7 +255,7 @@ async function runBuild({ id, check_run_id, installation_id, repository, head_sh
     status: 'in_progress',
   })
 
-  const url = await flakeUrl(octokit, repository, head_sha)
+  const url = await flakeUrl(octokit, repository, head)
 
   const { success, skipped, log } = await buildFragment(url, fragment)
 
