@@ -202,7 +202,7 @@ function formatLog(stdout) {
   return prefix + '```\n' + truncatedLog + '\n```'
 }
 
-async function buildFragment(url, fragment) {
+async function buildFragment(url, fragment, outLink) {
   function addLog(obj, log) {
     if (log) return { log: formatLog(log), ...obj }
     return obj
@@ -229,7 +229,7 @@ async function buildFragment(url, fragment) {
 
   var success = true
   try {
-    await execFile("nix", ["build", drvPath, "--no-link"])
+    await execFile("nix", ["build", drvPath, "--out-link", outLink])
   } catch (error) {
     success = false
   }
@@ -256,8 +256,8 @@ async function runBuild({ id, check_run_id, installation_id, repository, head, f
   })
 
   const url = await flakeUrl(octokit, repository, head)
-
-  const { success, skipped, log } = await buildFragment(url, fragment)
+  const outLink = `/var/lib/flakeaway/gc-roots/${owner}/${repo}/${head.branch}/${head.commit}/${fragment}`
+  const { success, skipped, log } = await buildFragment(url, fragment, outLink)
 
   if (success) {
     await octokit.rest.checks.update({
