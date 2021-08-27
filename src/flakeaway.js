@@ -1,11 +1,11 @@
 const fs = require('fs')
 const util = require('util')
-const execFile = util.promisify(require('child_process').execFile)
 const _ = require('lodash')
 const { v4: uuidv4 } = require('uuid')
 const { Octokit } = require("@octokit/rest")
 const { App, createNodeMiddleware } = require('@octokit/app')
 const { readFlake, getBuildableFragments } = require('./flake.js')
+const { runNix } = require('./nix.js')
 
 const privateKey = fs.readFileSync(process.env.PRIVATE_KEY_FILE)
 const app = new App({
@@ -38,11 +38,11 @@ const queue = queues.queue({
 })
 
 async function getSuppportedSystems() {
-  const { stdout } = await execFile('nix', ['show-config', '--json'])
+  const { stdout } = await runNix(['show-config', '--json'])
   const config = JSON.parse(stdout)
 
-  const { stdout: currentSystem } = await execFile(
-    'nix', ['eval', '--expr', 'builtins.currentSystem', '--raw', '--impure']
+  const { stdout: currentSystem } = await runNix(
+    ['eval', '--expr', 'builtins.currentSystem', '--raw', '--impure']
   )
 
   return [currentSystem, ...config["extra-platforms"].value]
@@ -137,10 +137,8 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
     status: 'in_progress',
   })
 
-  try {
-    var flake = await readFlakeGithub(octokit, repository, head)
-  } catch (error) {
-    console.warn(error)
+  const flake = await readFlakeGithub(octokit, repository, head)
+  if (!flake) {
     console.warn(`Failed to evaluate ${id}`)
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
@@ -148,8 +146,7 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
       conclusion: 'failure',
       output: {
         title: 'Evaluation failed',
-        summary: 'There was an error during evaluation of `flake.nix`.',
-        text: '```\n' + error.stderr + '\n```'
+        summary: 'There was an error during evaluation of `flake.nix`.'
       }
     })
     return
@@ -208,18 +205,17 @@ async function buildFragment(url, fragment, outLink) {
     return obj
   }
 
-  try {
-    var { stdout: metadata } = await execFile("nix", [
-      "eval",
-      `${url}#${fragment}`,
-      "--apply",
-      "output: { inherit (output) system drvPath; }",
-      "--json"
-    ])
-  } catch (error) {
-    return addLog({ success: false, skipped: false }, error.stderr)
+  const evaluation = await runNix([
+    "eval",
+    `${url}#${fragment}`,
+    "--apply",
+    "output: { inherit (output) system drvPath; }",
+    "--json"
+  ])
+  if (evaluation.exitCode > 0) {
+    return addLog({ success: false, skipped: false })
   }
-  const { system, drvPath } = JSON.parse(metadata)
+  const { system, drvPath } = JSON.parse(evaluation.stdout)
 
   // TODO: Don't reload supported systems for each build
   const supportedSystems = await getSuppportedSystems()
@@ -227,19 +223,15 @@ async function buildFragment(url, fragment, outLink) {
     return { success: false, skipped: true }
   }
 
-  var success = true
-  try {
-    await execFile("nix", ["build", drvPath, "--out-link", outLink])
-  } catch (error) {
-    success = false
-  }
+  const build = await runNix(["build", drvPath, "--out-link", outLink])
+  const success = build.exitCode == 0
 
-  try {
-    var { stdout } = await execFile("nix", ["log", drvPath])
-  } catch (error) {
+  const log = await runNix(["log", drvPath])
+  if (log.exitCode == 0) {
+    return addLog({ success, skipped: false }, log.stdout)
+  } else {
     return { success, skipped: false }
   }
-  return addLog({ success, skipped: false }, stdout)
 }
 
 async function runBuild({ id, check_run_id, installation_id, repository, head, fragment }) {

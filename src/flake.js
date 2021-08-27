@@ -1,6 +1,6 @@
 const util = require('util')
-const execFile = util.promisify(require('child_process').execFile)
 const _ = require('lodash')
+const { runNix } = require('./nix.js')
 
 function removeEscapes(text) {
 	return text
@@ -56,8 +56,12 @@ function parse(text) {
 }
 
 async function readFlake(url) {
-	const { stdout } = await execFile("nix", ["flake", "show", url])
-	return parse(stdout)
+	const { exitCode, stdout } = await runNix(["flake", "show", url])
+	if (exitCode == 0) {
+		return parse(stdout)
+	} else {
+		return null
+	}
 }
 
 function findChild(tree, name) {
