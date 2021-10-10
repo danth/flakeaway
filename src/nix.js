@@ -4,7 +4,7 @@ async function runNix(args) {
   return new Promise((resolve, reject) => {
     const subprocess = spawn(
       "nix",
-      ["-v", ...args],
+      ["-v", "--allow-import-from-derivation", ...args],
       { stdio: ['pipe', 'pipe', 'inherit'] }
     )
 
