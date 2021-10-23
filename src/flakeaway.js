@@ -70,6 +70,7 @@ async function createEvaluation({ octokit, payload }) {
     },
   }, {
     jobId: id,
+    priority: 1,
     removeOnFail: true,
     removeOnComplete: true,
   })
@@ -97,6 +98,7 @@ async function createBuild({ octokit, installation_id, repository, head, fragmen
     fragment,
   }, {
     jobId: id,
+    priority: 2,
     removeOnFail: true,
     removeOnComplete: true,
   })
