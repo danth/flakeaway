@@ -69,7 +69,9 @@ async function createEvaluation({ octokit, payload }) {
       branch: head_branch,
     },
   }, {
-    jobId: id
+    jobId: id,
+    removeOnFail: true,
+    removeOnComplete: true,
   })
 
   console.log(`Created evaluation ${id} for ${owner}/${repo}`)
@@ -94,7 +96,9 @@ async function createBuild({ octokit, installation_id, repository, head, fragmen
     head,
     fragment,
   }, {
-    jobId: id
+    jobId: id,
+    removeOnFail: true,
+    removeOnComplete: true,
   })
 
   console.log(`Created build ${id}`)
