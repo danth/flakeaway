@@ -61,7 +61,6 @@ async function createEvaluation({ octokit, payload }) {
   })
 
   queue.add('evaluation', {
-    id,
     installation_id: payload.installation.id,
     check_run_id: check_run.data.id,
     repository: payload.repository,
@@ -69,6 +68,8 @@ async function createEvaluation({ octokit, payload }) {
       commit: head_sha,
       branch: head_branch,
     },
+  }, {
+    jobId: id
   })
 
   console.log(`Created evaluation ${id} for ${owner}/${repo}`)
@@ -87,12 +88,13 @@ async function createBuild({ octokit, installation_id, repository, head, fragmen
   })
 
   queue.add('build', {
-    id,
     check_run_id: check_run.data.id,
     installation_id,
     repository,
     head,
     fragment,
+  }, {
+    jobId: id
   })
 
   console.log(`Created build ${id}`)
@@ -116,8 +118,8 @@ async function readFlakeGithub(octokit, repository, head) {
 }
 
 async function runEvaluation(job) {
-  const { id, check_run_id, installation_id, repository, head } = job.data
-  console.log(`Running evaluation ${id}`)
+  const { check_run_id, installation_id, repository, head } = job.data
+  console.log(`Running evaluation ${job.id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
 
@@ -131,7 +133,7 @@ async function runEvaluation(job) {
 
   const flake = await readFlakeGithub(octokit, repository, head)
   if (!flake) {
-    console.warn(`Failed to evaluate ${id}`)
+    console.warn(`Failed to evaluate ${job.id}`)
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
       status: 'completed',
@@ -163,7 +165,7 @@ async function runEvaluation(job) {
     fragment => createBuild({ octokit, installation_id, repository, head, fragment })
   ))
 
-  console.log(`Finished evaluation ${id}`)
+  console.log(`Finished evaluation ${job.id}`)
 }
 
 queue.process('evaluation', runEvaluation)
@@ -229,8 +231,8 @@ async function buildFragment(url, fragment, outLink) {
 }
 
 async function runBuild(job) {
-  const { id, check_run_id, installation_id, repository, head, fragment } = job.data
-  console.log(`Running build ${id}`)
+  const { check_run_id, installation_id, repository, head, fragment } = job.data
+  console.log(`Running build ${job.id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
 
@@ -257,7 +259,7 @@ async function runBuild(job) {
         text: log
       }
     })
-    console.log(`Finished build ${id}`)
+    console.log(`Finished build ${job.id}`)
   } else if (skipped) {
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
@@ -269,7 +271,7 @@ async function runBuild(job) {
         text: log
       }
     })
-    console.log(`Skipped build ${id}`)
+    console.log(`Skipped build ${job.id}`)
   } else {
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
@@ -281,7 +283,7 @@ async function runBuild(job) {
         text: log
       }
     })
-    console.log(`Failed to build ${id}`)
+    console.log(`Failed to build ${job.id}`)
   }
 }
 
