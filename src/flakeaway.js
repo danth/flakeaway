@@ -30,17 +30,6 @@ const queue = new Queue(
   { redis: { port: 6379, host: '127.0.0.1' } }
 )
 
-async function getSuppportedSystems() {
-  const { stdout } = await runNix(['show-config', '--json'])
-  const config = JSON.parse(stdout)
-
-  const { stdout: currentSystem } = await runNix(
-    ['eval', '--expr', 'builtins.currentSystem', '--raw', '--impure']
-  )
-
-  return [currentSystem, ...config["extra-platforms"].value]
-}
-
 async function createEvaluation({ octokit, payload }) {
   const owner = payload.repository.owner.login
   const repo = payload.repository.name
@@ -176,14 +165,22 @@ async function runEvaluation(job) {
 
 queue.process('evaluation', runEvaluation)
 
+function removeANSI(text) {
+  return text.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
+}
+
+const systemError = /^error: a '\S+' with features {.*} is required to build '\S+'/m
+function isSystemError(stderr) {
+  return systemError.test(removeANSI(stderr))
+}
+
 function formatLog(stdout) {
+  if (!stdout) return undefined
+
   const truncatedMessage = 'Earlier lines of this build log were truncated.\n'
   const limit = 65535 - 8 - truncatedMessage.length
 
-  // Remove ANSI escape sequences
-  const log = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
-
-  const logLines = log.split('\n')
+  const logLines = removeANSI(stdout).split('\n')
 
   var totalLength = 0
   const truncatedLines = _.takeRightWhile(
@@ -202,37 +199,30 @@ function formatLog(stdout) {
 }
 
 async function buildFragment(url, fragment, outLink) {
-  function addLog(obj, log) {
-    if (log) return { log: formatLog(log), ...obj }
-    return obj
-  }
-
   const evaluation = await runNix([
     "eval",
     `${url}#${fragment}`,
     "--apply",
-    "output: { inherit (output) system drvPath; }",
-    "--json"
+    "output: output.drvPath",
+    "--raw"
   ])
-  if (evaluation.exitCode > 0) {
-    return addLog({ success: false, skipped: false })
-  }
-  const { system, drvPath } = JSON.parse(evaluation.stdout)
+  const drvPath = evaluation.stdout
 
-  // TODO: Don't reload supported systems for each build
-  const supportedSystems = await getSuppportedSystems()
-  if (!supportedSystems.includes(system)) {
-    return { success: false, skipped: true }
+  if (evaluation.exitCode > 0) {
+    return {
+      success: false,
+      skipped: isSystemError(evaluation.stderr),
+      log: undefined,
+    }
   }
 
   const build = await runNix(["build", drvPath, "--out-link", outLink])
-  const success = build.exitCode == 0
-
   const log = await runNix(["log", drvPath])
-  if (log.exitCode == 0) {
-    return addLog({ success, skipped: false }, log.stdout)
-  } else {
-    return { success, skipped: false }
+
+  return {
+    success: build.exitCode == 0,
+    skipped: isSystemError(build.stderr),
+    log: formatLog(log.stdout),
   }
 }
 
