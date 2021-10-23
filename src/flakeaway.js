@@ -1,6 +1,7 @@
 const fs = require('fs')
 const util = require('util')
 const _ = require('lodash')
+const Queue = require('bull')
 const { v4: uuidv4 } = require('uuid')
 const { Octokit } = require("@octokit/rest")
 const { App, createNodeMiddleware } = require('@octokit/app')
@@ -21,21 +22,13 @@ const app = new App({
   Octokit
 })
 
-const queues = require('queuey')('/var/lib/flakeaway/queue.json')
-
 app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
-const queue = queues.queue({
-  name: 'jobs',
-  worker: task => {
-    if (task.type == 'evaluation') {
-      return runEvaluation(task)
-    } else {
-      return runBuild(task)
-    }
-  }
-})
+const queue = new Queue(
+  'jobs',
+  { redis: { port: 6379, host: '127.0.0.1' } }
+)
 
 async function getSuppportedSystems() {
   const { stdout } = await runNix(['show-config', '--json'])
@@ -67,8 +60,7 @@ async function createEvaluation({ octokit, payload }) {
     status: 'queued',
   })
 
-  queue.enqueue({
-    type: 'evaluation',
+  queue.add('evaluation', {
     id,
     installation_id: payload.installation.id,
     check_run_id: check_run.data.id,
@@ -94,8 +86,7 @@ async function createBuild({ octokit, installation_id, repository, head, fragmen
     status: 'queued',
   })
 
-  queue.enqueue({
-    type: 'build',
+  queue.add('build', {
     id,
     check_run_id: check_run.data.id,
     installation_id,
@@ -124,7 +115,8 @@ async function readFlakeGithub(octokit, repository, head) {
   return await readFlake(url)
 }
 
-async function runEvaluation({ id, check_run_id, installation_id, repository, head }) {
+async function runEvaluation(job) {
+  const { id, check_run_id, installation_id, repository, head } = job.data
   console.log(`Running evaluation ${id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
@@ -173,6 +165,8 @@ async function runEvaluation({ id, check_run_id, installation_id, repository, he
 
   console.log(`Finished evaluation ${id}`)
 }
+
+queue.process('evaluation', runEvaluation)
 
 function formatLog(stdout) {
   const truncatedMessage = 'Earlier lines of this build log were truncated.\n'
@@ -234,7 +228,8 @@ async function buildFragment(url, fragment, outLink) {
   }
 }
 
-async function runBuild({ id, check_run_id, installation_id, repository, head, fragment }) {
+async function runBuild(job) {
+  const { id, check_run_id, installation_id, repository, head, fragment } = job.data
   console.log(`Running build ${id}`)
 
   const octokit = await app.getInstallationOctokit(installation_id)
@@ -290,6 +285,8 @@ async function runBuild({ id, check_run_id, installation_id, repository, head, f
   }
 }
 
+queue.process('build', runBuild)
+
 app.webhooks.on('check_suite.requested', createEvaluation)
 app.webhooks.on('check_suite.rerequested', createEvaluation)
 app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
@@ -297,6 +294,13 @@ app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
 
   // TODO: Recreate individual builds
   await createCheck({ octokit, payload })
+})
+
+process.on('SIGTERM', async () => {
+  console.info('Waiting for current jobs to finish')
+  await queue.pause(true) // Local pause
+  await queue.close()
+  process.exit(0)
 })
 
 require('http').createServer(createNodeMiddleware(app)).listen(15345)

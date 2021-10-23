@@ -5,7 +5,10 @@ async function runNix(args) {
     const subprocess = spawn(
       "nix",
       ["-v", "--allow-import-from-derivation", ...args],
-      { stdio: ['pipe', 'pipe', 'inherit'] }
+      {
+        detached: true, // Don't propagate SIGTERM, to allow graceful shutdown
+        stdio: ['pipe', 'pipe', 'inherit']
+      }
     )
 
     subprocess.once('error', reject)
