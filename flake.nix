@@ -1,16 +1,19 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    dream2nix.url = "github:DavHau/dream2nix";
     utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { nixpkgs, utils, ... }:
-    utils.lib.eachDefaultSystem (system:
+  outputs = { dream2nix, utils, ... }:
+    utils.lib.eachSystem [ "x86_64-linux" "x86_64-darwin" ] (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
-        node-packages = import ./default.nix { inherit pkgs system; };
-        inherit (node-packages) package;
-      in rec {
+        inherit (dream2nix.lib.dream2nix.${system}) riseAndShine;
+        build = riseAndShine {
+          dreamLock = ./dream.lock;
+          sourceOverrides = oldSources: { "flakeaway#0.0.0" = ./.; };
+        };
+        inherit (build) package;
+      in {
         packages.flakeaway = package;
         defaultPackage = package;
       });
