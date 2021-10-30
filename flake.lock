@@ -5,15 +5,14 @@
         "mach-nix": "mach-nix",
         "nix-parsec": "nix-parsec",
         "nixpkgs": "nixpkgs",
-        "node2nix": "node2nix",
-        "npmlock2nix": "npmlock2nix"
+        "node2nix": "node2nix"
       },
       "locked": {
-        "lastModified": 1635406070,
-        "narHash": "sha256-TidNjQ5T7//9mRriWJPCNEn2WFWyRwFbCMQoj0R0tO8=",
+        "lastModified": 1635501807,
+        "narHash": "sha256-8e+rq8bLg7WpZh4QxCt7PREVIDZQs9YhDeGyylkzTD0=",
         "owner": "DavHau",
         "repo": "dream2nix",
-        "rev": "ca8ccc96b5ee56ebe89161978d369a6b6eb18678",
+        "rev": "47287126d8ea4c5b586f38e3044f31af7578cccb",
         "type": "github"
       },
       "original": {
@@ -84,41 +83,9 @@
         "type": "github"
       }
     },
-    "npmlock2nix": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1631558099,
-        "narHash": "sha256-xguvgtrIQHPxpc4J6EhfBnYtQDGJpt6hK1dN7KEi8R4=",
-        "owner": "nix-community",
-        "repo": "npmlock2nix",
-        "rev": "33eb3300561d724da64a46ab8e9a05a9cfa9264b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nix-community",
-        "repo": "npmlock2nix",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
-        "dream2nix": "dream2nix",
-        "utils": "utils"
-      }
-    },
-    "utils": {
-      "locked": {
-        "lastModified": 1623875721,
-        "narHash": "sha256-A8BU7bjS5GirpAUv4QA+QnJ4CceLHkcXdRp4xITDB0s=",
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "rev": "f7e004a55b120c02ecb6219596820fcd32ca8772",
-        "type": "github"
-      },
-      "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
+        "dream2nix": "dream2nix"
       }
     }
   },
