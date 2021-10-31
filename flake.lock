@@ -8,11 +8,11 @@
         "node2nix": "node2nix"
       },
       "locked": {
-        "lastModified": 1635501807,
-        "narHash": "sha256-8e+rq8bLg7WpZh4QxCt7PREVIDZQs9YhDeGyylkzTD0=",
+        "lastModified": 1635700928,
+        "narHash": "sha256-+Gglwej9rK5VkGcO3sbRtp0EkTfN0wf0th4Y+Ldv9N8=",
         "owner": "DavHau",
         "repo": "dream2nix",
-        "rev": "47287126d8ea4c5b586f38e3044f31af7578cccb",
+        "rev": "f30b6759f43b04f14f7afc736aec6ce426fee1a5",
         "type": "github"
       },
       "original": {
