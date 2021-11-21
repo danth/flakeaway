@@ -54,6 +54,15 @@ in {
   };
 
   config = mkIf cfg.enable {
+    assertions = [{
+      assertion = with builtins;
+        elem "*" config.nix.allowedUsers
+        || elem "flakeaway" config.nix.allowedUsers
+        || elem "@flakeaway" config.nix.allowedUsers;
+      message =
+        "The user `flakeaway` must be allowed to access the Nix daemon.";
+    }];
+
     services.redis = {
       enable = true;
       port = 6379;
@@ -68,8 +77,6 @@ in {
       };
       groups.flakeaway = { };
     };
-
-    nix.allowedUsers = [ "flakeaway" ];
 
     systemd.services.flakeaway = {
       description = "Flakeaway CI server";
