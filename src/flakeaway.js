@@ -163,7 +163,7 @@ async function runEvaluation(job) {
   console.log(`Finished evaluation ${job.id}`)
 }
 
-queue.process('evaluation', runEvaluation)
+queue.process('evaluation', 1, runEvaluation)
 
 function removeANSI(text) {
   return text.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '')
@@ -283,7 +283,9 @@ async function runBuild(job) {
   }
 }
 
-queue.process('build', runBuild)
+// Concurrency stacks. Since the evaluation processor already has a concurrency
+// of 1, we don't want to add any more.
+queue.process('build', 0, runBuild)
 
 app.webhooks.on('check_suite.requested', createEvaluation)
 app.webhooks.on('check_suite.rerequested', createEvaluation)
