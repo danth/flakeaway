@@ -81,8 +81,8 @@ in {
     systemd.services.flakeaway = {
       description = "Flakeaway CI server";
 
-      wants = [ "network-online.target" "redis.service" ];
-      after = [ "network-online.target" "redis.service" ];
+      wants = [ "network-online.target" "nix-daemon.service" "redis.service" ];
+      after = [ "network-online.target" "nix-daemon.service" "redis.service" ];
       wantedBy = [ "default.target" ];
 
       path = with pkgs; [ gitMinimal nix_2_4 ];
