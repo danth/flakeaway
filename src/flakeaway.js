@@ -25,10 +25,7 @@ const app = new App({
 app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
-const queue = new Queue(
-  'jobs',
-  { redis: { port: 6379, host: '127.0.0.1' } }
-)
+const queue = new Queue('jobs', { redis: { path: process.env.REDIS } })
 
 async function createEvaluation({ octokit, payload }) {
   const owner = payload.repository.owner.login

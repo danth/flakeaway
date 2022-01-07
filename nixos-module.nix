@@ -63,11 +63,6 @@ in {
         "The user `flakeaway` must be allowed to access the Nix daemon.";
     }];
 
-    services.redis = {
-      enable = true;
-      port = 6379;
-    };
-
     users = {
       users.flakeaway = {
         isSystemUser = true;
@@ -78,11 +73,16 @@ in {
       groups.flakeaway = { };
     };
 
+    services.redis.servers.flakeaway = {
+      enable = true;
+      user = "flakeaway";
+    };
+
     systemd.services.flakeaway = {
       description = "Flakeaway CI server";
 
-      wants = [ "network-online.target" "nix-daemon.service" "redis.service" ];
-      after = [ "network-online.target" "nix-daemon.service" "redis.service" ];
+      wants = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
+      after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
       path = with pkgs; [ gitMinimal nix_2_4 ];
@@ -93,6 +93,7 @@ in {
         CLIENT_SECRET = cfg.clientSecret;
         PRIVATE_KEY_FILE = cfg.privateKeyFile;
         WEBHOOK_SECRET = cfg.webhookSecret;
+        REDIS = config.services.redis.servers.flakeaway.unixSocket;
       };
 
       serviceConfig = {
