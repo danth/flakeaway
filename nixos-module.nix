@@ -54,14 +54,20 @@ in {
   };
 
   config = mkIf cfg.enable {
-    assertions = [{
-      assertion = with builtins;
-        elem "*" config.nix.allowedUsers
-        || elem "flakeaway" config.nix.allowedUsers
-        || elem "@flakeaway" config.nix.allowedUsers;
-      message =
-        "The user `flakeaway` must be allowed to access the Nix daemon.";
-    }];
+    assertions = [
+      {
+        assertion = with builtins;
+          elem "*" config.nix.allowedUsers
+          || elem "flakeaway" config.nix.allowedUsers
+          || elem "@flakeaway" config.nix.allowedUsers;
+        message =
+          "The user `flakeaway` must be allowed to access the Nix daemon.";
+      }
+      {
+        assertion = versionAtLeast pkgs.nix.version "2.4";
+        message = "Flakeaway requires at least Nix version 2.4.";
+      }
+    ];
 
     users = {
       users.flakeaway = {
@@ -85,7 +91,7 @@ in {
       after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
-      path = with pkgs; [ gitMinimal nix_2_4 ];
+      path = with pkgs; [ gitMinimal nix ];
 
       environment = {
         APP_ID = cfg.appId;
