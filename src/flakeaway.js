@@ -287,10 +287,27 @@ queue.process('build', 0, runBuild)
 app.webhooks.on('check_suite.requested', createEvaluation)
 app.webhooks.on('check_suite.rerequested', createEvaluation)
 app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
-  if (payload.check_run.app.id != process.env.APP_ID) return
+  if (payload.check_run.name.startsWith("Build")) {
+    const head_sha = payload.check_run.check_suite.head_sha
+    const head_branch = payload.check_run.check_suite.head_branch
 
-  // TODO: Recreate individual builds
-  await createCheck({ octokit, payload })
+    await createBuild({
+      octokit,
+      installation_id: payload.installation.id,
+      repository: payload.repository,
+      head: {
+        commit: head_sha,
+        branch: head_branch,
+      },
+      /* .slice(6) removes 'Build ' from the start of the name,
+       * leaving the fragment to be rebuilt.
+       * TODO: Determine the rerequested fragment more reliably.
+       */
+      fragment: payload.check_run.name.slice(6),
+    })
+  } else {
+    await createEvaluation({ octokit, payload })
+  }
 })
 
 process.on('SIGTERM', async () => {
