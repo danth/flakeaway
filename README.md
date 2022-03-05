@@ -31,4 +31,8 @@ outputs and publish the results on GitHub.
 
 4. Set `services.flakeaway.enable` to `true` to enable the service.
 
+You can optionally set `services.flakeaway.allowedUsers` to a list of user /
+organisation names in order to limit use of your instance to only those
+accounts.
+
 [create-github-app]: https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app

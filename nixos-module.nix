@@ -51,6 +51,16 @@ in {
       '';
       type = types.str;
     };
+
+    allowedUsers = mkOption {
+      description = ''
+        List of user / organisation names which are allowed to access this
+        Flakeaway instance.
+      '';
+      type = with types; nullOr (listOf str);
+      default = null;
+      defaultText = "Anyone has access.";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -100,7 +110,9 @@ in {
         PRIVATE_KEY_FILE = cfg.privateKeyFile;
         WEBHOOK_SECRET = cfg.webhookSecret;
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
-      };
+      } // (optionalAttrs (!isNull cfg.allowedUsers) {
+        ALLOWED_USERS = concatStringsSep "," cfg.allowedUsers;
+      });
 
       serviceConfig = {
         WorkingDirectory = "/var/lib/flakeaway";

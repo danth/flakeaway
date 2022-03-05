@@ -8,6 +8,18 @@ async function createEvaluation({ octokit, payload, queue }) {
   const target = reducePayload(payload)
   const { owner, repo, head_sha } = target
 
+  // Don't process repositories which aren't allowed to use this instance
+  if (process.env.ALLOWED_USERS) {
+    const allowedUsers = process.env.ALLOWED_USERS.split(',')
+    if (!allowedUsers.includes(owner)) {
+      console.warn(
+        `Blocked evaluation of ${owner}/${repo} because ` +
+        `${owner} is not authorised to use this instance`
+      )
+      return
+    }
+  }
+
   const check_run = await octokit.rest.checks.create({
     owner, repo, head_sha,
     external_id: id,
