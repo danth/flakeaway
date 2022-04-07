@@ -50,17 +50,16 @@ async function buildFragment(url, fragment, outLink) {
     return {
       success: false,
       skipped: isSystemError(evaluation.stderr),
-      log: undefined,
+      log: formatLog(evaluation.stderr),
     }
   }
 
   const build = await runNix(["build", drvPath, "--out-link", outLink])
-  const log = await runNix(["log", drvPath])
 
   return {
     success: build.exitCode == 0,
     skipped: isSystemError(build.stderr),
-    log: formatLog(log.stdout),
+    log: formatLog(build.stderr),
   }
 }
 
