@@ -131,5 +131,7 @@ in {
     };
 
     networking.firewall.allowedTCPPorts = [ 15345 ];
+
+    systemd.tmpfiles.rules = [ "d /var/lib/flakeaway/.cache - flakeaway flakeaway 7d -" ];
   };
 }
