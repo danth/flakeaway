@@ -59,7 +59,7 @@ async function buildFragment(url, fragment, outLink) {
   return {
     success: build.exitCode == 0,
     skipped: isSystemError(build.stderr),
-    log: formatLog(build.stderr),
+    log: formatLog(evaluation.stderr + "\n" + build.stderr),
   }
 }
 
