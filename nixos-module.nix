@@ -61,6 +61,18 @@ in {
       default = null;
       defaultText = "Anyone has access.";
     };
+
+    remoteStores = mkOption {
+      description = ''
+        Remote stores to which built packages will be uploaded.
+
+        Adding at least one remote store will prevent garbage collection
+        roots from being created in the local Nix store.
+      '';
+      type = with types; listOf str;
+      default = [];
+      example = [ "s3://nix-cache?profile=nix-cache&endpoint=cache.example.com" ];
+    };
   };
 
   config = mkIf cfg.enable {
@@ -110,6 +122,9 @@ in {
         PRIVATE_KEY_FILE = cfg.privateKeyFile;
         WEBHOOK_SECRET = cfg.webhookSecret;
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
+        REMOTE_STORES = pkgs.writeText
+          "remote-stores.json"
+          (builtins.toJSON cfg.remoteStores);
       } // (optionalAttrs (!isNull cfg.allowedUsers) {
         ALLOWED_USERS = concatStringsSep "," cfg.allowedUsers;
       });

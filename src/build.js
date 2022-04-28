@@ -1,3 +1,4 @@
+const fs = require('fs').promises
 const _ = require('lodash')
 const { v4: uuidv4 } = require('uuid')
 const { githubFlakeUrl, reducePayload } = require('./github.js')
@@ -57,11 +58,27 @@ async function buildFragment(url, fragment, outLink) {
   const build = await runNix(["build", drvPath, "--out-link", outLink])
 
   return {
+    drvPath,
     success: build.exitCode == 0,
     skipped: isSystemError(build.stderr),
     log: formatLog(evaluation.stderr + build.stderr),
   }
 }
+
+async function storeFragment(job, drvPath, outLink) {
+  const stores = JSON.parse(await fs.readFile(process.env.REMOTE_STORES, 'utf-8'));
+
+  for (const store of stores) {
+    console.log(`Pushing result of ${job.id} to ${store}`)
+    await runNix(["copy", "--to", store, drvPath])
+  }
+
+  if (stores) {
+    console.log(`Allowing result of ${job.id} to be garbage collected locally`)
+    await fs.unlink(outLink)
+  }
+}
+
 
 async function createBuild({ octokit, queue, target, fragment }) {
   const id = uuidv4()
@@ -114,7 +131,7 @@ async function runBuild({ app, job }) {
 
   const url = await githubFlakeUrl({ octokit, target })
   const outLink = `/var/lib/flakeaway/gc-roots/${owner}/${repo}/${head_branch}/${head_sha}/${fragment}`
-  const { success, skipped, log } = await buildFragment(url, fragment, outLink)
+  const { drvPath, success, skipped, log } = await buildFragment(url, fragment, outLink)
 
   if (success) {
     await octokit.rest.checks.update({
@@ -128,6 +145,8 @@ async function runBuild({ app, job }) {
       }
     })
     console.log(`Finished build ${job.id}`)
+
+    await storeFragment(job, drvPath, outLink)
   } else if (skipped) {
     await octokit.rest.checks.update({
       owner, repo, check_run_id,
