@@ -1,9 +1,10 @@
-const fs = require('fs')
-const Queue = require('bull')
-const { Octokit } = require("@octokit/rest")
-const { App, createNodeMiddleware } = require('@octokit/app')
-const { createEvaluation, rerequestEvaluation, runEvaluation } = require('./evaluate.js')
-const { rerequestBuild, runBuild } = require('./build.js')
+import fs from 'fs'
+import Queue from 'bull'
+import { Octokit } from '@octokit/rest'
+import { App, createNodeMiddleware } from '@octokit/app'
+import { createServer } from 'http'
+import { createEvaluation, rerequestEvaluation, runEvaluation } from './jobs/evaluate.js'
+import { rerequestBuild, runBuild } from './jobs/build.js'
 
 const privateKey = fs.readFileSync(process.env.PRIVATE_KEY_FILE)
 const app = new App({
@@ -51,4 +52,4 @@ process.on('SIGTERM', async () => {
   process.exit(0)
 })
 
-require('http').createServer(createNodeMiddleware(app)).listen(15345)
+createServer(createNodeMiddleware(app)).listen(15345)

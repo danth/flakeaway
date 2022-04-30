@@ -1,6 +1,6 @@
-const util = require('util')
-const _ = require('lodash')
-const { runNix } = require('./nix.js')
+import util from 'util'
+import _ from 'lodash'
+import { runNix } from './nix.js'
 
 function removeEscapes(text) {
 	return text
@@ -55,7 +55,7 @@ function parse(text) {
 	return buildTree(parsedLines, 1)
 }
 
-async function readFlake(url) {
+export async function readFlake(url) {
 	const { exitCode, stdout } = await runNix(["flake", "show", url])
 	if (exitCode == 0) {
 		return parse(stdout)
@@ -79,7 +79,7 @@ function getPaths(tree) {
 	}
 }
 
-function getBuildableFragments(tree) {
+export function getBuildableFragments(tree) {
 	const fragments = []
 
 	for (let outputName of ["checks", "packages"]) {
@@ -94,5 +94,3 @@ function getBuildableFragments(tree) {
 
 	return fragments
 }
-
-module.exports = { readFlake, getBuildableFragments }

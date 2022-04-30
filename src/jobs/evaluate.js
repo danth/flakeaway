@@ -1,9 +1,9 @@
-const { v4: uuidv4 } = require('uuid')
-const { createBuild } = require('./build.js')
-const { getBuildableFragments, readFlake } = require('./flake.js')
-const { githubFlakeUrl, reducePayload } = require('./github.js')
+import { v4 as uuidv4 } from 'uuid'
+import { createBuild } from './build.js'
+import { getBuildableFragments, readFlake } from '../nix/flake.js'
+import { githubFlakeUrl, reducePayload } from '../github.js'
 
-async function createEvaluation({ octokit, payload, queue }) {
+export async function createEvaluation({ octokit, payload, queue }) {
   const id = uuidv4()
   const target = reducePayload(payload)
   const { owner, repo, head_sha } = target
@@ -40,9 +40,9 @@ async function createEvaluation({ octokit, payload, queue }) {
   console.log(`Created evaluation ${id} for ${owner}/${repo}`)
 }
 
-let rerequestEvaluation = createEvaluation
+export let rerequestEvaluation = createEvaluation
 
-async function runEvaluation({ app, job }) {
+export async function runEvaluation({ app, job }) {
   console.log(`Running evaluation ${job.id}`)
 
   const { target, check_run_id } = job.data
@@ -93,5 +93,3 @@ async function runEvaluation({ app, job }) {
 
   console.log(`Finished evaluation ${job.id}`)
 }
-
-module.exports = { createEvaluation, rerequestEvaluation, runEvaluation }

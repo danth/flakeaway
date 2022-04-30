@@ -2,6 +2,7 @@
   "name": "flakeaway",
   "version": "0.0.0",
   "main": "src/flakeaway.js",
+  "type": "module",
   "bin": {
     "flakeaway": "src/flakeaway.js"
   },
@@ -18,7 +19,11 @@
     "@octokit/app": "^12.0.3",
     "@octokit/rest": "^18.9.0",
     "bull": "^4.8.2",
+    "filesize": "^8.0.7",
+    "humanize-duration": "^3.27.1",
     "lodash": "^4.17.21",
+    "markdown-table": "^3.0.2",
+    "tmp-promise": "^3.0.3",
     "uuid": "^8.3.2"
   }
 }

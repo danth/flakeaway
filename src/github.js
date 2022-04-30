@@ -1,4 +1,4 @@
-async function githubFlakeUrl({ octokit, target }) {
+export async function githubFlakeUrl({ octokit, target }) {
   const { token } = await octokit.auth({
     type: 'installation',
     repositoryIds: [target.repo_id],
@@ -8,7 +8,7 @@ async function githubFlakeUrl({ octokit, target }) {
 	return `git+https://oauth2:${token}@github.com/${owner}/${repo}.git?ref=${head_branch}&rev=${head_sha}`
 }
 
-function reducePayload(payload) {
+export function reducePayload(payload) {
   return {
     owner: payload.repository.owner.login,
     repo: payload.repository.name,
@@ -22,5 +22,3 @@ function reducePayload(payload) {
     installation_id: payload.installation.id,
   }
 }
-
-module.exports = { githubFlakeUrl, reducePayload }

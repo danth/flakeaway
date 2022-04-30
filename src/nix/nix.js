@@ -1,13 +1,14 @@
-const { spawn } = require('child_process')
+import { spawn } from 'child_process'
 
-async function runNix(args) {
+export async function runNix(args, environment = {}) {
   return new Promise((resolve, reject) => {
     const subprocess = spawn(
       "nix",
       ["-v", "--allow-import-from-derivation", ...args],
       {
         detached: true, // Don't propagate SIGTERM, to allow graceful shutdown
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        env: { ...process.env, ...environment }
       }
     )
 
@@ -29,5 +30,3 @@ async function runNix(args) {
     })
   })
 }
-
-module.exports = { runNix }
