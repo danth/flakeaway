@@ -36,28 +36,18 @@ function formatLog(stdout) {
 function formatStatistics(statistics) {
   let document = '### Evaluation analysis\n\n'
 
-  const cpuTime = formatDuration(
-    statistics.cpuTime * 1000,
-    { maxDecimalPoints: 3 }
-  )
-  document += `Evaluation of this fragment consumed **${cpuTime}** of processor time. `
-
-  const primitives = statistics.nrPrimOpCalls
-  const functions = statistics.nrFunctionCalls
-  document += `There were **${primitives} primitive** calls and **${functions} function** calls.\n\n`
-
   const heapSize = formatSize(statistics.gc.heapSize)
   const totalBytes = formatSize(statistics.gc.totalBytes)
   document += `The heap had a total size of **${heapSize}**, and **${totalBytes}** of memory was allocated. `
 
   const thunks = statistics.nrThunks
-  document += `**${thunks} thunks** were created on the heap.\n\n`
+  document += `**${thunks} thunks** were created on the heap.\n`
 
   // TODO: What is being avoided?
   // const avoided = statistics.nrAvoided
   // document += `**${avoided}** avoided. `
 
-  document += 'The following table is a breakdown of the resource usage categorised by type:\n\n'
+  document += 'The following table is a breakdown of usage, categorised by type:\n\n'
   document += markdownTable(
     [
       // Headings
@@ -98,6 +88,45 @@ function formatStatistics(statistics) {
     ],
     {
       align: 'c',
+      // We do not need the raw markdown to be readable
+      padding: false,
+      alignDelimiters: false
+    }
+  )
+
+  const cpuTime = formatDuration(
+    statistics.cpuTime * 1000,
+    { maxDecimalPoints: 3 }
+  )
+  document += `\n\nEvaluation of this fragment consumed **${cpuTime}** of processor time.\n\n`
+
+  const primitives = statistics.nrPrimOpCalls
+  const functions = statistics.nrFunctionCalls
+  document += `There were **${primitives} primitive** calls and **${functions} function** calls. `
+
+  document += 'These functions were called most often:\n\n'
+  document += markdownTable(
+    [
+      // Headings
+      [ 'Function', 'Calls', 'File', 'Line', 'Column' ],
+      // Data
+      ...statistics.functions
+        // Ignore anonymous functions
+        .filter(f => f.name)
+        // Sort by number of calls, greatest first
+        .sort((a, b) => b.count - a.count)
+        // Only display the top 10 most called functions
+        .slice(0, 10)
+        .map(f => [
+          '`' + f.name + '`',
+          f.count,
+          '`' + f.file + '`',
+          f.line,
+          f.column
+        ])
+    ],
+    {
+      align: ['l', 'c', 'l'],
       // We do not need the raw markdown to be readable
       padding: false,
       alignDelimiters: false

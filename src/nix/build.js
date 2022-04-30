@@ -27,7 +27,8 @@ async function evaluateFragment(url, fragment) {
       ],
       {
         NIX_SHOW_STATS: 1,
-        NIX_SHOW_STATS_PATH: path
+        NIX_SHOW_STATS_PATH: path,
+        NIX_COUNT_CALLS: 1
       }
     )
 
