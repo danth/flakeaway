@@ -130,7 +130,7 @@ async function runBuild({ app, job }) {
   })
 
   const url = await githubFlakeUrl({ octokit, target })
-  const outLink = `/var/lib/flakeaway/gc-roots/${owner}/${repo}/${head_branch}/${head_sha}/${fragment}`
+  const outLink = `/var/lib/flakeaway/gc-roots/${owner}/${repo}/${head_branch}/${head_sha}/${fragment.replace("/", "-")}`
   const { drvPath, success, skipped, log } = await buildFragment(url, fragment, outLink)
 
   if (success) {
