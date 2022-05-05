@@ -3,12 +3,18 @@ import { removeANSI } from '../ansi.js'
 import { runNix } from './nix.js'
 import { withFile } from 'tmp-promise'
 
+const BUILD_STORE = process.env.BUILD_STORE
+const RESULT_STORES = JSON.parse(process.env.RESULT_STORES)
+
+const CREATE_GC_ROOTS = BUILD_STORE == "auto"
+const KEEP_GC_ROOTS = !RESULT_STORES
+
 const systemError = /^error: a '\S+' with features {.*} is required to build '\S+'/m
 function isSystemError(stderr) {
   return systemError.test(removeANSI(stderr))
 }
 
-function makeOutLink(job) {
+function makeGcRoot(job) {
   const { owner, repo, head_branch, head_sha } = job.data.target
   const fragment = job.data.fragment.replace('/', '-')
   return `/var/lib/flakeaway/gc-roots/${owner}/${repo}/${head_branch}/${head_sha}/${fragment}`
@@ -43,8 +49,19 @@ async function evaluateFragment(url, fragment) {
   })
 }
 
-async function buildFragment(drvPath, outLink) {
-  const build = await runNix(["build", drvPath, "--out-link", outLink])
+async function buildFragment(url, fragment, drvPath, gcRoot) {
+  // Some remote stores don't support building drvs directly
+  const buildOptions = BUILD_STORE == "auto" ? [drvPath] : [`${url}#${fragment}`]
+
+  const linkOptions = CREATE_GC_ROOTS ? ["--out-link", gcRoot] : ["--no-link"]
+
+  const build = await runNix([
+    "build",
+    ...buildOptions,
+    "--store", BUILD_STORE,
+    "--eval-store", "auto",
+    ...linkOptions
+  ])
 
   return {
     success: build.exitCode == 0,
@@ -52,15 +69,18 @@ async function buildFragment(drvPath, outLink) {
   }
 }
 
-async function storeFragment(job, drvPath, outLink) {
-  const stores = JSON.parse(await fs.readFile(process.env.REMOTE_STORES, 'utf-8'));
-
-  for (const store of stores) {
-    console.log(`Pushing result of ${job.id} to ${store}`)
-    await runNix(["copy", "--to", store, drvPath])
+async function storeFragment(job, drvPath, gcRoot) {
+  for (const store of RESULT_STORES) {
+    console.log(`Copying result of ${job.id} to ${store}`)
+    await runNix([
+      "copy",
+      drvPath,
+      "--from", BUILD_STORE,
+      "--to", store
+    ])
   }
 
-  if (stores) {
+  if (CREATE_GC_ROOTS && !KEEP_GC_ROOTS) {
     console.log(`Allowing result of ${job.id} to be garbage collected locally`)
     await fs.unlink(outLink)
   }
@@ -79,14 +99,14 @@ export async function nixBuild(job, url, fragment) {
     }
   }
 
-  const outLink = makeOutLink(job)
+  const gcRoot = makeGcRoot(job)
 
   console.log(`Building ${job.id}`)
-  const build = await buildFragment(evaluation.drvPath, outLink)
+  const build = await buildFragment(url, fragment, evaluation.drvPath, gcRoot)
 
   if (build.success) {
     console.log(`Storing ${job.id}`)
-    await storeFragment(job, evaluation.drvPath, outLink)
+    await storeFragment(job, evaluation.drvPath, gcRoot)
   }
 
   return {

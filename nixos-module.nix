@@ -62,16 +62,39 @@ in {
       defaultText = "Anyone has access.";
     };
 
-    remoteStores = mkOption {
-      description = ''
-        Remote stores to which built packages will be uploaded.
+    stores = {
+      build = mkOption {
+        description = ''
+          Remote store used during the build itself.
 
-        Adding at least one remote store will prevent garbage collection
-        roots from being created in the local Nix store.
-      '';
-      type = with types; listOf str;
-      default = [];
-      example = [ "s3://nix-cache?profile=nix-cache&endpoint=cache.example.com" ];
+          By default, builds run on the same machine as Flakeaway.
+          A remote store is one way to offload building to another machine.
+          See https://docs.nixbuild.net/remote-builds/#using-remote-stores
+          for an example of how this works.
+
+          Setting a remote store will prevent garbage collection roots from
+          being created.
+
+          Note that <literal>--eval-store</literal> is always set to
+          <literal>auto</literal>, so the store of the Flakeaway server
+          will still be used during the evaluation phase.
+        '';
+        type = types.str;
+        default = "auto";
+        example = "ssh-ng://builder.example.com";
+      };
+
+      result = mkOption {
+        description = ''
+          Remote stores to which finished packages will be uploaded.
+
+          Adding at least one remote store will prevent garbage collection
+          roots from being created in the local Nix store.
+        '';
+        type = with types; listOf str;
+        default = [];
+        example = [ "s3://nix-cache?profile=nix-cache&endpoint=cache.example.com" ];
+      };
     };
   };
 
@@ -113,7 +136,7 @@ in {
       after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
-      path = with pkgs; [ gitMinimal nix ];
+      path = with pkgs; [ gitMinimal openssh nix ];
 
       environment = {
         APP_ID = cfg.appId;
@@ -122,9 +145,8 @@ in {
         PRIVATE_KEY_FILE = cfg.privateKeyFile;
         WEBHOOK_SECRET = cfg.webhookSecret;
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
-        REMOTE_STORES = pkgs.writeText
-          "remote-stores.json"
-          (builtins.toJSON cfg.remoteStores);
+        BUILD_STORE = cfg.stores.build;
+        RESULT_STORES = builtins.toJSON cfg.stores.result;
       } // (optionalAttrs (!isNull cfg.allowedUsers) {
         ALLOWED_USERS = concatStringsSep "," cfg.allowedUsers;
       });
