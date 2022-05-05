@@ -82,7 +82,7 @@ async function storeFragment(job, drvPath, gcRoot) {
 
   if (CREATE_GC_ROOTS && !KEEP_GC_ROOTS) {
     console.log(`Allowing result of ${job.id} to be garbage collected locally`)
-    await fs.unlink(outLink)
+    await fs.unlink(gcRoot)
   }
 }
 
