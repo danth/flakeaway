@@ -24,6 +24,12 @@ app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
 const queue = new Queue('jobs', { redis: { path: process.env.REDIS } })
+
+queue.on('failed', (job, err) => {
+  console.error(`${job.id} encountered an error:`)
+  console.error(err)
+})
+
 queue.process('evaluation', 1, job => runEvaluation({ app, job }))
 // Concurrency stacks. Since the evaluation processor already has a concurrency
 // of 1, we don't want to add any more.
