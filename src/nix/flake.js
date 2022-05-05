@@ -4,7 +4,7 @@ import { runNix } from './nix.js'
 export async function readFlake(url) {
 	const { exitCode, stdout } = await runNix(['flake', 'show', url, '--json'])
 	if (exitCode == 0) {
-		return parse(stdout)
+		return JSON.parse(stdout)
 	} else {
 		return null
 	}
