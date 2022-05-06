@@ -85,6 +85,9 @@ async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
     summary += '### Evaluated successfully:\n'
     summary += succeededSummary
   }
+  if (!failedSummary && !succeededSummary) {
+    summary += 'This flake does not contain any buildable outputs.'
+  }
 
   await octokit.rest.checks.update({
     owner, repo, check_run_id,
