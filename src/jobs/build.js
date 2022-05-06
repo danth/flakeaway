@@ -151,7 +151,7 @@ export async function createBuild({ octokit, queue, target, fragment }) {
     status: 'queued',
   })
 
-  await queue.add('build', {
+  await queue.add({
     target, fragment,
     check_run_id: check_run.data.id,
   }, {

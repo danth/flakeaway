@@ -23,38 +23,49 @@ const app = new App({
 app.octokit.request('/app')
   .then(({ data }) => console.log('authenticated as %s', data.name))
 
-const queue = new Queue('jobs', { redis: { path: process.env.REDIS } })
-
-queue.on('failed', (job, err) => {
+function logJobError(job, error) {
   console.error(`${job.id} encountered an error:`)
-  console.error(err)
-})
+  console.error(error)
+}
 
-queue.process('evaluation', 1, job => runEvaluation({ app, job }))
-// Concurrency stacks. Since the evaluation processor already has a concurrency
-// of 1, we don't want to add any more.
-queue.process('build', 0, job => runBuild({ app, job }))
+const BUILD_CONCURRENCY = parseInt(process.env.BUILD_CONCURRENCY)
+const EVALUATION_CONCURRENCY = parseInt(process.env.EVALUATION_CONCURRENCY)
+
+const buildQueue = new Queue('builds', { redis: { path: process.env.REDIS } })
+buildQueue.on('failed', logJobError)
+buildQueue.process(BUILD_CONCURRENCY, job => runBuild({ app, job }))
+
+const evaluationQueue = new Queue('evaluations', { redis: { path: process.env.REDIS } })
+evaluationQueue.on('failed', logJobError)
+evaluationQueue.process(EVALUATION_CONCURRENCY, job => runEvaluation({ app, job, buildQueue }))
 
 app.webhooks.on('check_suite.requested', async ({ octokit, payload }) => {
-  await createEvaluation({ octokit, payload, queue })
+  await createEvaluation({ octokit, payload, queue: evaluationQueue })
 })
-
 app.webhooks.on('check_suite.rerequested', async ({ octokit, payload }) => {
-  await rerequestEvaluation({ octokit, payload, queue })
+  await rerequestEvaluation({ octokit, payload, queue: evaluationQueue })
 })
-
 app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
   if (payload.check_run.name.startsWith("Build")) {
-    await rerequestBuild({ octokit, payload, queue })
+    await rerequestBuild({ octokit, payload, queue: buildQueue })
   } else {
-    await rerequestEvaluation({ octokit, payload, queue })
+    await rerequestEvaluation({ octokit, payload, queue: evaluationQueue })
   }
 })
 
 process.on('SIGTERM', async () => {
   console.info('Waiting for current jobs to finish')
-  await queue.pause(true) // Local pause
-  await queue.close()
+
+  await Promise.all([
+    buildQueue.pause(true),
+    evaluationQueue.pause(true)
+  ])
+
+  await Promise.all([
+    buildQueue.close(),
+    evaluationQueue.close()
+  ])
+
   process.exit(0)
 })
 

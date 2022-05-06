@@ -27,7 +27,7 @@ export async function createEvaluation({ octokit, payload, queue }) {
     status: 'queued',
   })
 
-  await queue.add('evaluation', {
+  await queue.add({
     target,
     check_run_id: check_run.data.id,
   }, {
@@ -42,7 +42,7 @@ export async function createEvaluation({ octokit, payload, queue }) {
 
 export let rerequestEvaluation = createEvaluation
 
-export async function runEvaluation({ app, job }) {
+export async function runEvaluation({ app, buildQueue, job }) {
   console.log(`Running evaluation ${job.id}`)
 
   const { target, check_run_id } = job.data
@@ -75,7 +75,7 @@ export async function runEvaluation({ app, job }) {
   const fragments = getBuildableFragments(flake)
 
   await Promise.all(fragments.map(
-    fragment => createBuild({ octokit, queue: job.queue, target, fragment })
+    fragment => createBuild({ octokit, queue: buildQueue, target, fragment })
   ))
 
   await octokit.rest.checks.update({

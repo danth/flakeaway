@@ -62,6 +62,20 @@ in {
       defaultText = "Anyone has access.";
     };
 
+    concurrency = {
+      evaluation = mkOption {
+        description = "Number of evaluation jobs to run in parallel.";
+        type = types.int;
+        default = 1;
+      };
+
+      build = mkOption {
+        description = "Number of builds to run in parallel.";
+        type = types.int;
+        default = 1;
+      };
+    };
+
     stores = {
       build = mkOption {
         description = ''
@@ -145,6 +159,8 @@ in {
         PRIVATE_KEY_FILE = cfg.privateKeyFile;
         WEBHOOK_SECRET = cfg.webhookSecret;
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
+        EVALUATION_CONCURRENCY = toString cfg.concurrency.evaluation;
+        BUILD_CONCURRENCY = toString cfg.concurrency.build;
         BUILD_STORE = cfg.stores.build;
         RESULT_STORES = builtins.toJSON cfg.stores.result;
       } // (optionalAttrs (!isNull cfg.allowedUsers) {
