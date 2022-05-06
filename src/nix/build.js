@@ -27,8 +27,6 @@ async function buildFragment(url, fragment, drvPath, gcRoot) {
       ? [drvPath]
       : [`${url}#${fragment}`]
 
-  console.log(buildOptions)
-
   const linkOptions = CREATE_GC_ROOTS ? ["--out-link", gcRoot] : ["--no-link"]
 
   const build = await runNix([
