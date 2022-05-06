@@ -1,7 +1,8 @@
 import { v4 as uuidv4 } from 'uuid'
 import { createBuild } from './build.js'
-import { getBuildableFragments, readFlake } from '../nix/flake.js'
+import { runNixEvalJobs } from '../nix/evaluate/evaluate.js'
 import { githubFlakeUrl, reducePayload } from '../github.js'
+import { formatLog } from '../log.js'
 
 export async function createEvaluation({ octokit, payload, queue }) {
   const id = uuidv4()
@@ -42,6 +43,57 @@ export async function createEvaluation({ octokit, payload, queue }) {
 
 export let rerequestEvaluation = createEvaluation
 
+async function publishError({ octokit, owner, repo, check_run_id }) {
+  await octokit.rest.checks.update({
+    owner, repo, check_run_id,
+    status: 'completed',
+    conclusion: 'failure',
+    output: {
+      title: 'Evaluation failed',
+      summary: 'There was an error when trying to evaluate the outputs of the flake.'
+    }
+  })
+}
+
+async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
+  let conclusion = 'neutral'
+  let succeededSummary = ''
+  let failedSummary = ''
+
+  for (const job of jobs) {
+    if (job.error) {
+      conclusion = 'failure'
+      failedSummary += `- ${job.attrPath[0]}\n`
+      failedSummary += '  ```\n  '
+      failedSummary += job.error.replace('\n', '\n  ')
+      failedSummary += '\n  ```\n'
+    } else {
+      succeededSummary += `- ${job.attrPath[0]}\n`
+    }
+  }
+
+  const title = conclusion == 'failure'
+    ? 'Evaluation partially failed'
+    : 'Evaluation finished'
+
+  let summary = ''
+  if (failedSummary) {
+    summary += '### Failed to evaluate:\n'
+    summary += failedSummary
+  }
+  if (succeededSummary) {
+    summary += '### Evaluated successfully:\n'
+    summary += succeededSummary
+  }
+
+  await octokit.rest.checks.update({
+    owner, repo, check_run_id,
+    status: 'completed',
+    conclusion,
+    output: { title, summary }
+  })
+}
+
 export async function runEvaluation({ app, buildQueue, job }) {
   console.log(`Running evaluation ${job.id}`)
 
@@ -56,40 +108,26 @@ export async function runEvaluation({ app, buildQueue, job }) {
   })
 
   const url = await githubFlakeUrl({ octokit, target })
-  const flake = await readFlake(url)
+  const { exitCode, jobs } = await runNixEvalJobs(url)
 
-  if (!flake) {
-    console.warn(`Failed to evaluate ${job.id}`)
-    await octokit.rest.checks.update({
-      owner, repo, check_run_id,
-      status: 'completed',
-      conclusion: 'failure',
-      output: {
-        title: 'Evaluation failed',
-        summary: 'There was an error during evaluation of `flake.nix`.'
-      }
-    })
+  if (exitCode > 0) {
+    await publishError({ octokit, owner, repo, check_run_id })
+    console.log(`Failed to evaluate ${job.id}`)
     return
   }
 
-  const fragments = getBuildableFragments(flake)
+  await Promise.all(
+    jobs
+      .filter(evaluatedJob => !evaluatedJob.error)
+      .map(evaluatedJob => createBuild({
+        octokit,
+        queue: buildQueue,
+        target,
+        fragment: evaluatedJob.attrPath[0],
+        drvPath: evaluatedJob.drvPath
+      }))
+  )
 
-  await Promise.all(fragments.map(
-    fragment => createBuild({ octokit, queue: buildQueue, target, fragment })
-  ))
-
-  await octokit.rest.checks.update({
-    owner, repo, check_run_id,
-    status: 'completed',
-    conclusion: 'success',
-    output: {
-      title: 'Evaluation succeeded',
-      summary: (
-        `These ${fragments.length} fragments will be built:\n` +
-        fragments.map(fragment => `- ${fragment}`).join('\n')
-      )
-    }
-  })
-
+  await publishStatus({ octokit, owner, repo, check_run_id, jobs })
   console.log(`Finished evaluation ${job.id}`)
 }

@@ -150,7 +150,7 @@ in {
       after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
-      path = with pkgs; [ gitMinimal openssh nix ];
+      path = with pkgs; [ gitMinimal openssh nix nix-eval-jobs ];
 
       environment = {
         APP_ID = cfg.appId;
