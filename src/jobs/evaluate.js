@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from 'uuid'
 import { createBuild } from './build.js'
-import { runNixEvalJobs } from '../nix/evaluate/evaluate.js'
+import { evaluateJobs } from '../nix/evaluate.js'
 import { githubFlakeUrl, reducePayload } from '../github.js'
 import { formatLog } from '../log.js'
 
@@ -63,12 +63,12 @@ async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
   for (const job of jobs) {
     if (job.error) {
       conclusion = 'failure'
-      failedSummary += `- ${job.attrPath[0]}\n`
+      failedSummary += `- ${job.attr}\n`
       failedSummary += '  ```\n  '
       failedSummary += job.error.replace('\n', '\n  ')
       failedSummary += '\n  ```\n'
     } else {
-      succeededSummary += `- ${job.attrPath[0]}\n`
+      succeededSummary += `- ${job.attr}\n`
     }
   }
 
@@ -108,7 +108,7 @@ export async function runEvaluation({ app, buildQueue, job }) {
   })
 
   const url = await githubFlakeUrl({ octokit, target })
-  const { exitCode, jobs } = await runNixEvalJobs(url)
+  const { exitCode, jobs } = await evaluateJobs(url)
 
   if (exitCode > 0) {
     await publishError({ octokit, owner, repo, check_run_id })
@@ -123,7 +123,7 @@ export async function runEvaluation({ app, buildQueue, job }) {
         octokit,
         queue: buildQueue,
         target,
-        fragment: evaluatedJob.attrPath[0],
+        fragment: evaluatedJob.attr,
         drvPath: evaluatedJob.drvPath
       }))
   )

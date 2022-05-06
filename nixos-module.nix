@@ -5,7 +5,10 @@ with lib;
 
 let
   cfg = config.services.flakeaway;
+
   inherit (self.packages.${pkgs.system}) flakeaway;
+
+  flakeaway-evaluator = pkgs.callPackage ./evaluator {};
 
 in {
   options.services.flakeaway = {
@@ -150,7 +153,7 @@ in {
       after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
-      path = with pkgs; [ gitMinimal openssh nix nix-eval-jobs ];
+      path = with pkgs; [ gitMinimal openssh nix flakeaway-evaluator ];
 
       environment = {
         APP_ID = cfg.appId;
