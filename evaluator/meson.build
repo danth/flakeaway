@@ -2,7 +2,7 @@ project(
   'flakeaway-evaluator',
   'cpp',
   version : '0.0.0',
-  license : 'AGPL-3.0',
+  license : 'GPL-3.0',
 )
 
 executable(
