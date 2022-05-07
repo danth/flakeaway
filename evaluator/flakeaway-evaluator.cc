@@ -332,7 +332,10 @@ std::function<void()> collector(Sync<State> &state_,
                         newAttr.emplace_back(i);
                         newAttrs.push_back(newAttr);
                     }
-                } else {
+                } else if (
+                    response.find("drvPath") != response.end() ||
+                    response.find("error") != response.end()
+                ) {
                     auto state(state_.lock());
                     std::cout << respString << "\n" << std::flush;
                 }

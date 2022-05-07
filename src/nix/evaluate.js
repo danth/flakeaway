@@ -16,12 +16,7 @@ export async function evaluateJobs(url) {
 
     var jobs = []
     subprocess.stdout.setEncoding('utf8')
-    subprocess.stdout.on('data', data => {
-      const parsedData = JSON.parse(data)
-      if (parsedData.hasOwnProperty('drvPath')) {
-        jobs.push(parsedData)
-      }
-    })
+    subprocess.stdout.on('data', data => jobs.push(JSON.parse(data)))
 
     subprocess.once('close', exitCode => {
       resolve({ exitCode, jobs })
