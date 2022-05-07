@@ -1,5 +1,5 @@
 import { promises as fs } from 'fs'
-import { removeANSI } from '../ansi.js'
+import { isSystemError } from '../log.js'
 import { runNix } from './nix.js'
 
 const BUILD_STORE = process.env.BUILD_STORE
@@ -7,11 +7,6 @@ const RESULT_STORES = JSON.parse(process.env.RESULT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
 const KEEP_GC_ROOTS = !RESULT_STORES
-
-const systemError = /^error: a '\S+' with features {.*} is required to build '\S+'/m
-function isSystemError(stderr) {
-  return systemError.test(removeANSI(stderr))
-}
 
 function makeGcRoot(job) {
   const { owner, repo, head_branch, head_sha } = job.data.target

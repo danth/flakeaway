@@ -1,5 +1,14 @@
 import _ from 'lodash'
-import { removeANSI } from './ansi.js'
+
+const ANSI = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
+export function removeANSI(log) {
+  return log.replace(ANSI, '')
+}
+
+const SYSTEM_ERROR = /^error: a '\S+' with features {.*} is required to build '\S+'/m
+export function isSystemError(log) {
+  return SYSTEM_ERROR.test(removeANSI(log))
+}
 
 export function formatLog(log) {
   if (!log) return undefined
