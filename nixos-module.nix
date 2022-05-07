@@ -5,10 +5,7 @@ with lib;
 
 let
   cfg = config.services.flakeaway;
-
-  inherit (self.packages.${pkgs.system}) flakeaway;
-
-  flakeaway-evaluator = pkgs.callPackage ./evaluator {};
+  inherit (self.packages.${pkgs.system}) flakeaway flakeaway-evaluator;
 
 in {
   options.services.flakeaway = {
