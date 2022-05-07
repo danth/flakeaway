@@ -76,6 +76,20 @@ in {
       };
     };
 
+    evaluator = {
+      workers = mkOption {
+        description = "Number of parallel workers within each evaluation job.";
+        type = types.int;
+        default = 1;
+      };
+
+      workerMemory = mkOption {
+        description = "Maximum memory consumption of a single worker process, in MiB.";
+        type = types.int;
+        default = 2048;
+      };
+    };
+
     stores = {
       build = mkOption {
         description = ''
@@ -161,6 +175,8 @@ in {
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
         EVALUATION_CONCURRENCY = toString cfg.concurrency.evaluation;
         BUILD_CONCURRENCY = toString cfg.concurrency.build;
+        EVALUATOR_WORKERS = toString cfg.evaluator.workers;
+        EVALUATOR_WORKER_MEMORY = toString cfg.evaluator.workerMemory;
         BUILD_STORE = cfg.stores.build;
         RESULT_STORES = builtins.toJSON cfg.stores.result;
       } // (optionalAttrs (!isNull cfg.allowedUsers) {

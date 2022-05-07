@@ -4,7 +4,12 @@ export async function evaluateJobs(url) {
   return new Promise((resolve, reject) => {
     const subprocess = spawn(
       "flakeaway-evaluator",
-      [ "--verbose", url ],
+      [
+        "--verbose",
+        "--workers", process.env.EVALUATOR_WORKERS,
+        "--max-memory-size", process.env.EVALUATOR_WORKER_MEMORY,
+        url
+      ],
       {
         detached: true, // Don't propagate SIGTERM, to allow graceful shutdown
         stdio: ['pipe', 'pipe', 'inherit'],

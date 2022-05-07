@@ -39,7 +39,7 @@ using namespace nlohmann;
 struct MyArgs : MixEvalArgs, MixCommonArgs {
     std::string flakeRef;
     size_t nrWorkers = 1;
-    size_t maxMemorySize = 4096;
+    size_t maxMemorySize = 2048;
 
     MyArgs() : MixCommonArgs("nix-eval-jobs") {
         addFlag({
