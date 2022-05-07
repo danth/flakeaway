@@ -1,6 +1,17 @@
 import { spawn } from 'child_process'
 
-export async function evaluateJobs(url) {
+/*
+Evaluate all of the outputs of the flake at `url` simultaneously.
+
+`jobsCallback`, which should be an async function, will be called
+with information about each output, as it is produced.
+
+Once all jobs have been evaluated and their callbacks have resolved,
+the returned promise will resolve with an exit code.
+Exit code 0 → Evaluation finished (but individual jobs may fail)
+Exit code 1 → Evaluation failed (no jobs were evaluated)
+*/
+export async function evaluateJobs(url, jobCallback) {
   return new Promise((resolve, reject) => {
     const subprocess = spawn(
       "flakeaway-evaluator",
@@ -19,12 +30,16 @@ export async function evaluateJobs(url) {
 
     subprocess.once('error', reject)
 
-    var jobs = []
     subprocess.stdout.setEncoding('utf8')
-    subprocess.stdout.on('data', data => jobs.push(JSON.parse(data)))
+
+    const callbacks = []
+    subprocess.stdout.on('data', data => {
+      const parsedData = JSON.parse(data)
+      callbacks.push(jobCallback(parsedData))
+    })
 
     subprocess.once('close', exitCode => {
-      resolve({ exitCode, jobs })
+      Promise.all(callbacks).then(() => resolve(exitCode))
     })
   })
 }

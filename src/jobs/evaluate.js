@@ -43,6 +43,18 @@ export async function createEvaluation({ octokit, payload, queue }) {
 
 export let rerequestEvaluation = createEvaluation
 
+function statusFailed(status, job) {
+  status.conclusion = 'failure'
+  status.failedSummary += `- ${job.attr}\n`
+  status.failedSummary += '  ```\n  '
+  status.failedSummary += job.error.replace('\n', '\n  ')
+  status.failedSummary += '\n  ```\n'
+}
+
+function statusSucceeded(status, job) {
+  status.succeededSummary += `- ${job.attr}\n`
+}
+
 async function publishError({ octokit, owner, repo, check_run_id }) {
   await octokit.rest.checks.update({
     owner, repo, check_run_id,
@@ -55,45 +67,30 @@ async function publishError({ octokit, owner, repo, check_run_id }) {
   })
 }
 
-async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
-  let conclusion = 'success'
-  let succeededSummary = ''
-  let failedSummary = ''
-
-  for (const job of jobs) {
-    if (job.error) {
-      conclusion = 'failure'
-      failedSummary += `- ${job.attr}\n`
-      failedSummary += '  ```\n  '
-      failedSummary += job.error.replace('\n', '\n  ')
-      failedSummary += '\n  ```\n'
-    } else {
-      succeededSummary += `- ${job.attr}\n`
-    }
-  }
-
-  const title = conclusion == 'failure'
-    ? 'Evaluation partially failed'
-    : 'Evaluation finished'
-
+async function publishStatus({ octokit, owner, repo, check_run_id, status }) {
   let summary = ''
-  if (failedSummary) {
+  if (status.failedSummary) {
     summary += '### Failed to evaluate:\n'
-    summary += failedSummary
+    summary += status.failedSummary
   }
-  if (succeededSummary) {
+  if (status.succeededSummary) {
     summary += '### Evaluated successfully:\n'
-    summary += succeededSummary
+    summary += status.succeededSummary
   }
-  if (!failedSummary && !succeededSummary) {
-    conclusion = 'neutral'
+  if (!status.failedSummary && !status.succeededSummary) {
+    status.conclusion = 'neutral'
     summary += 'This flake does not contain any buildable outputs.'
   }
+
+  const title =
+    status.conclusion == 'failure'
+    ? 'Evaluation partially failed'
+    : 'Evaluation finished'
 
   await octokit.rest.checks.update({
     owner, repo, check_run_id,
     status: 'completed',
-    conclusion,
+    conclusion: status.conclusion,
     output: { title, summary }
   })
 }
@@ -111,27 +108,35 @@ export async function runEvaluation({ app, buildQueue, job }) {
     status: 'in_progress',
   })
 
-  const url = await githubFlakeUrl({ octokit, target })
-  const { exitCode, jobs } = await evaluateJobs(url)
+  const status = {
+    conclusion: 'success',
+    succeededSummary: '',
+    failedSummary: ''
+  }
+
+  const exitCode = await evaluateJobs(
+    await githubFlakeUrl({ octokit, target }),
+    async evaluatedJob => {
+      if (evaluatedJob.error) {
+        statusFailed(status, evaluatedJob)
+      } else {
+        statusSucceeded(status, evaluatedJob)
+        await createBuild({
+          octokit,
+          queue: buildQueue,
+          target,
+          fragment: evaluatedJob.attr,
+          drvPath: evaluatedJob.drvPath
+        })
+      }
+    }
+  )
 
   if (exitCode > 0) {
     await publishError({ octokit, owner, repo, check_run_id })
-    console.log(`Failed to evaluate ${job.id}`)
-    return
+  } else {
+    await publishStatus({ octokit, owner, repo, check_run_id, status })
   }
 
-  await Promise.all(
-    jobs
-      .filter(evaluatedJob => !evaluatedJob.error)
-      .map(evaluatedJob => createBuild({
-        octokit,
-        queue: buildQueue,
-        target,
-        fragment: evaluatedJob.attr,
-        drvPath: evaluatedJob.drvPath
-      }))
-  )
-
-  await publishStatus({ octokit, owner, repo, check_run_id, jobs })
   console.log(`Finished evaluation ${job.id}`)
 }
