@@ -2,10 +2,10 @@
 
 Flakeaway is a simple CI server for [Nix flakes](https://nixos.wiki/wiki/Flakes).
 
-## Self-hosted
+## Self-hosted setup
 
-You can run Flakeaway on your own server which will be used to build Flake
-outputs and publish the results on GitHub.
+You can run Flakeaway on your own server which will be used to evaluate jobs,
+build them and then publish the results on GitHub.
 
 1. Register a new GitHub app by following [these instructions][create-github-app].
 
@@ -31,8 +31,19 @@ outputs and publish the results on GitHub.
 
 4. Set `services.flakeaway.enable` to `true` to enable the service.
 
-You can optionally set `services.flakeaway.allowedUsers` to a list of user /
-organisation names in order to limit use of your instance to only those
-accounts.
-
 [create-github-app]: https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app
+
+## Further configuration
+
+You can set `services.flakeaway.allowedUsers` to a list of user / organisation names
+in order to limit use of your instance to only those accounts.
+
+Use the options under `services.flakeaway.concurrency` to control how many evaluations
+and builds can be running at the same time. By default, there will only be one of each.
+
+Set `services.flakeaway.evaluator.workers` to a value greater than one to use multiple
+processes per evaluation job. This means that individual outputs can be evaluated in
+parallel. You can use `services.flakeaway.evaluator.workerMemory` to limit the amount
+of memory which a single process can consume before it will be reset. By default this
+is set to 2GiB. Higher values will evaluate faster because more information can be cached
+in memory.
