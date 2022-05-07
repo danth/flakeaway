@@ -56,7 +56,7 @@ async function publishError({ octokit, owner, repo, check_run_id }) {
 }
 
 async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
-  let conclusion = 'neutral'
+  let conclusion = 'success'
   let succeededSummary = ''
   let failedSummary = ''
 
@@ -86,6 +86,7 @@ async function publishStatus({ octokit, owner, repo, check_run_id, jobs }) {
     summary += succeededSummary
   }
   if (!failedSummary && !succeededSummary) {
+    conclusion = 'neutral'
     summary += 'This flake does not contain any buildable outputs.'
   }
 
