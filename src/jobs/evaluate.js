@@ -87,8 +87,12 @@ async function publishStatus({ octokit, owner, repo, check_run_id, status }) {
     summary += status.succeededSummary
   }
   if (!status.failedSummary && !status.succeededSummary) {
-    status.conclusion = 'neutral'
-    summary += 'This flake does not contain any buildable outputs.'
+    if (status.numberSkipped) {
+      status.conclusion = 'skipped'
+    } else {
+      status.conclusion = 'neutral'
+      summary += 'This flake does not contain any buildable outputs.'
+    }
   }
 
   const title =
