@@ -80,7 +80,7 @@ async function publishStatus({ octokit, owner, repo, check_run_id, status }) {
   if (status.numberSkipped) {
     summary += '### Evaluation unavailable:\n'
     summary += `${status.numberSkipped} jobs could not be evaluated because `
-    summary += 'their evaluation requires a platform which is not supported.'
+    summary += 'their evaluation requires a platform which is not supported.\n'
   }
   if (status.succeededSummary) {
     summary += '### Evaluated successfully:\n'
