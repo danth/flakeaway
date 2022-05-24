@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { createBuild } from './build.js'
 import { evaluateJobs } from '../nix/evaluate.js'
 import { githubFlakeUrl, reducePayload } from '../github.js'
-import { formatLog } from '../log.js'
+import { formatLog, isSystemError } from '../log.js'
 
 export async function createEvaluation({ octokit, payload, queue }) {
   const id = uuidv4()
@@ -44,11 +44,15 @@ export async function createEvaluation({ octokit, payload, queue }) {
 export let rerequestEvaluation = createEvaluation
 
 function statusFailed(status, job) {
-  status.conclusion = 'failure'
-  status.failedSummary += `- ${job.attr}\n`
-  status.failedSummary += '  ```\n  '
-  status.failedSummary += job.error.replace('\n', '\n  ')
-  status.failedSummary += '\n  ```\n'
+  if (isSystemError(job.error)) {
+    status.numberSkipped += 1
+  } else {
+    status.conclusion = 'failure'
+    status.failedSummary += `- ${job.attr}\n`
+    status.failedSummary += '  ```\n  '
+    status.failedSummary += job.error.replace('\n', '\n  ')
+    status.failedSummary += '\n  ```\n'
+  }
 }
 
 function statusSucceeded(status, job) {
@@ -72,6 +76,11 @@ async function publishStatus({ octokit, owner, repo, check_run_id, status }) {
   if (status.failedSummary) {
     summary += '### Failed to evaluate:\n'
     summary += status.failedSummary
+  }
+  if (status.numberSkipped) {
+    summary += '### Evaluation unavailable:\n'
+    summary += `${status.numberSkipped} jobs could not be evaluated because `
+    summary += 'their evaluation requires a platform which is not supported.'
   }
   if (status.succeededSummary) {
     summary += '### Evaluated successfully:\n'
@@ -111,7 +120,8 @@ export async function runEvaluation({ app, buildQueue, job }) {
   const status = {
     conclusion: 'success',
     succeededSummary: '',
-    failedSummary: ''
+    failedSummary: '',
+    numberSkipped: 0
   }
 
   const exitCode = await evaluateJobs(
