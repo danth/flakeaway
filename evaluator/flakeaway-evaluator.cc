@@ -184,8 +184,8 @@ static void worker(EvalState &state, Bindings &autoArgs, AutoCloseFD &to,
 
                 if (recurse) {
                     auto attrs = nlohmann::json::array();
-                    for (auto &i : v->attrs->lexicographicOrder()) {
-                        std::string name(i->name);
+                    for (auto &i : v->attrs->lexicographicOrder(state.symbols)) {
+                        const std::string &name = state.symbols[i->name];
                         attrs.push_back(name);
                     }
                     reply["attrs"] = std::move(attrs);
