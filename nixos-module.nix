@@ -11,55 +11,57 @@ in {
   options.services.flakeaway = {
     enable = mkEnableOption "Flakeaway CI server";
 
-    appId = mkOption {
-      description = ''
-        App ID.
-        This is provided by GitHub on the app configuration page.
-      '';
-      type = types.str;
-    };
+    github = {
+      appId = mkOption {
+        description = ''
+          App ID.
+          This is provided by GitHub on the app configuration page.
+        '';
+        type = types.str;
+      };
 
-    clientId = mkOption {
-      description = ''
-        Client ID.
-        This is provided by GitHub on the app configuration page.
-      '';
-      type = types.str;
-    };
+      clientId = mkOption {
+        description = ''
+          Client ID.
+          This is provided by GitHub on the app configuration page.
+        '';
+        type = types.str;
+      };
 
-    clientSecret = mkOption {
-      description = ''
-        Client secret.
-        You can generate this on the GitHub app configuration page.
-      '';
-      type = types.str;
-    };
+      clientSecret = mkOption {
+        description = ''
+          Client secret.
+          You can generate this on the GitHub app configuration page.
+        '';
+        type = types.str;
+      };
 
-    privateKeyFile = mkOption {
-      description = ''
-        Path to a file containing the private key.
-        You can generate this on the GitHub app configuration page.
-      '';
-      type = types.path;
-    };
+      privateKeyFile = mkOption {
+        description = ''
+          Path to a file containing the private key.
+          You can generate this on the GitHub app configuration page.
+        '';
+        type = types.path;
+      };
 
-    webhookSecret = mkOption {
-      description = ''
-        Secret used to secure webhooks as coming from GitHub.
-        You must set this to the same value on the GitHub app configuration
-        page.
-      '';
-      type = types.str;
-    };
+      webhookSecret = mkOption {
+        description = ''
+          Secret used to secure webhooks as coming from GitHub.
+          You must set this to the same value on the GitHub app configuration
+          page.
+        '';
+        type = types.str;
+      };
 
-    allowedUsers = mkOption {
-      description = ''
-        List of user / organisation names which are allowed to access this
-        Flakeaway instance.
-      '';
-      type = with types; nullOr (listOf str);
-      default = null;
-      defaultText = "Anyone has access.";
+      allowedUsers = mkOption {
+        description = ''
+          List of user / organisation names which are allowed to access this
+          Flakeaway instance.
+        '';
+        type = with types; nullOr (listOf str);
+        default = null;
+        defaultText = "Anyone has access.";
+      };
     };
 
     concurrency = {
@@ -167,11 +169,11 @@ in {
       path = with pkgs; [ gitMinimal openssh nix flakeaway-evaluator ];
 
       environment = {
-        APP_ID = cfg.appId;
-        CLIENT_ID = cfg.clientId;
-        CLIENT_SECRET = cfg.clientSecret;
-        PRIVATE_KEY_FILE = cfg.privateKeyFile;
-        WEBHOOK_SECRET = cfg.webhookSecret;
+        GITHUB_APP_ID = cfg.github.appId;
+        GITHUB_CLIENT_ID = cfg.github.clientId;
+        GITHUB_CLIENT_SECRET = cfg.github.clientSecret;
+        GITHUB_PRIVATE_KEY_FILE = cfg.github.privateKeyFile;
+        GITHUB_WEBHOOK_SECRET = cfg.github.webhookSecret;
         REDIS = config.services.redis.servers.flakeaway.unixSocket;
         EVALUATION_CONCURRENCY = toString cfg.concurrency.evaluation;
         BUILD_CONCURRENCY = toString cfg.concurrency.build;
@@ -179,8 +181,8 @@ in {
         EVALUATOR_WORKER_MEMORY = toString cfg.evaluator.workerMemory;
         BUILD_STORE = cfg.stores.build;
         RESULT_STORES = builtins.toJSON cfg.stores.result;
-      } // (optionalAttrs (!isNull cfg.allowedUsers) {
-        ALLOWED_USERS = concatStringsSep "," cfg.allowedUsers;
+      } // (optionalAttrs (!isNull cfg.github.allowedUsers) {
+        GITHUB_ALLOWED_USERS = concatStringsSep "," cfg.github.allowedUsers;
       });
 
       serviceConfig = {
