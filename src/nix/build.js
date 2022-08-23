@@ -5,7 +5,7 @@ const BUILD_STORE = process.env.BUILD_STORE
 const RESULT_STORES = JSON.parse(process.env.RESULT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
-const KEEP_GC_ROOTS = !RESULT_STORES
+const KEEP_GC_ROOTS = !RESULT_STORES.length
 
 export async function buildFragment(url, fragment, drvPath, gcRoot) {
   const buildOptions =
