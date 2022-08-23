@@ -34,8 +34,11 @@ export async function evaluateJobs(url, jobCallback) {
 
     const callbacks = []
     subprocess.stdout.on('data', data => {
-      const parsedData = JSON.parse(data)
-      callbacks.push(jobCallback(parsedData))
+      const lines = data.trim().split('\n')
+      for (const line of lines) {
+        const parsed = JSON.parse(line)
+        callbacks.push(jobCallback(parsed))
+      }
     })
 
     subprocess.once('close', exitCode => {
