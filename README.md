@@ -2,18 +2,6 @@
 
 Flakeaway is a simple CI server for [Nix flakes](https://nixos.wiki/wiki/Flakes).
 
-## Not maintained
-
-Since writing Flakeaway, I've started using [nixbuild.net](https://nixbuild.net/)
-and their GitHub actions workflow. This allows me to save money by only paying for
-the builds I actually use, rather than a permanent server.
-
-Hence I will not be maintaining this repository from now on.
-
-However, I do think that Flakeaway had some potential behind it. If someone wants to
-work on this, please do let me know and I'll be happy to give you access / transfer
-the repository.
-
 ## Self-hosted setup
 
 You can run Flakeaway on your own server which will be used to evaluate jobs,
