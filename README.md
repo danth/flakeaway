@@ -11,6 +11,15 @@ build them and then publish the results on GitHub.
 
    Set the webhook URL to `http://your-host.example.com:15345/api/github/webhooks`.
 
+   The following permissions are required on the app:
+   - Checks: write
+   - Contents: read
+   - Metadata: read
+
+   Enable webhooks for these events:
+   - Check run
+   - Check suite
+
 2. Add the flake `github:danth/flakeaway` to your system configuration, and
    import the NixOS module which is exported as `nixosModules.flakeaway`.
 
