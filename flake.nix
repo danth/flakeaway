@@ -15,18 +15,19 @@
 
       eachSystem = inputs.utils.lib.eachSystem systems;
 
-      dream2nix =  inputs.dream2nix.lib.init {
-        inherit systems;
-        config.projectRoot = ./.;
-      };
-
       outputSets = [
-        (dream2nix.makeFlakeOutputs {
+        (inputs.dream2nix.lib.makeFlakeOutputs {
+          inherit systems;
           source = ./cli;
+          config.projectRoot = ./.;
+          settings = [{ subsystemInfo.nodejs = 18; }];
         })
 
-        (dream2nix.makeFlakeOutputs {
+        (inputs.dream2nix.lib.makeFlakeOutputs {
+          inherit systems;
           source = ./server;
+          config.projectRoot = ./.;
+          settings = [{ subsystemInfo.nodejs = 18; }];
         })
 
         (eachSystem (system: {

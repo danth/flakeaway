@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import Queue from 'bull'
 import express from 'express'
 import { initializeGitHub } from './forges/github.js'

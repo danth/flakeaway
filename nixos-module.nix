@@ -204,7 +204,7 @@ in {
         User = "flakeaway";
         Group = "flakeaway";
 
-        ExecStart = "${pkgs.nodejs}/bin/node ${flakeaway-server}/bin/flakeaway-server";
+        ExecStart = "${flakeaway-server}/bin/flakeaway-server";
 
         Restart = "on-failure";
 
