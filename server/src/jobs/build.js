@@ -1,25 +1,36 @@
 import { markdownTable } from 'markdown-table'
 import { v4 as uuidv4 } from 'uuid'
 import { isSystemError } from '../log.js'
-import { buildFragment, storeFragment } from '../nix/build.js'
+import { buildFragment, storeFragment, getSupportedSystems } from '../nix/build.js'
 import { deserializeForge } from '../forges.js'
 
-export async function createBuild({ forge, queue, fragment, drvPath }) {
+export async function createBuild({ forge, queue, system, fragment, drvPath }) {
   const id = uuidv4()
 
   const check_id = await forge.createBuild(id, fragment)
 
-  await queue.add({
-    forge: forge.serialize(),
-    check_id, fragment, drvPath
-  }, {
-    jobId: id,
-    priority: 2,
-    removeOnFail: true,
-    removeOnComplete: true,
-  })
+  const supportedSystems = await getSupportedSystems()
+  if (supportedSystems.includes(system) || (!system)) {
+    await queue.add({
+      forge: forge.serialize(),
+      check_id, fragment, drvPath
+    }, {
+      jobId: id,
+      priority: 2,
+      removeOnFail: true,
+      removeOnComplete: true,
+    })
 
-  console.log(`Created build ${id}`)
+    console.log(`Created build ${id}`)
+  } else {
+    // We know that we can't build the toplevel derivation, so skip the job
+    // immediately. Sometimes derivations depend on builds on other systems,
+    // in that case, we will run the build until an error is detected.
+    // TODO: Recursively scan derivations to predict unsupported systems.
+    await forge.skipBuild(check_id, null)
+
+    console.log(`Created skipped build ${id}`)
+  }
 }
 
 export async function rerequestBuild({ forge, queue, fragment }) {

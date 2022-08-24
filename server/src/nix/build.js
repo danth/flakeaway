@@ -7,6 +7,20 @@ const OUTPUT_STORES = JSON.parse(process.env.OUTPUT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
 
+export async function getSupportedSystems() {
+  const systems = []
+
+  const { stdout } = await runNix(["show-config", "--json"])
+  const config = JSON.parse(stdout)
+
+  systems.push(config.system.value)
+  systems.push(...config['extra-platforms'].value)
+
+  // TODO: Detect systems of remote builders
+
+  return systems
+}
+
 export async function buildFragment(url, fragment, drvPath, gcRoot) {
   const buildOptions =
     // Some remote stores don't support building drvs directly
