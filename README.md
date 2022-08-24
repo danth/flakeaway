@@ -43,7 +43,7 @@ example setup using Nginx:
 
 ### GitHub
 
-Register a new GitHub app by following [these instructions][create-github-app].
+Register a new GitHub app by following [these instructions](https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app).
 
 The following permissions are required on the app:
 - Checks: write
@@ -59,11 +59,11 @@ Set the webhook URL to `https://flakeaway.example.com/api/github/webhooks`.
 Set these NixOS options to the corresponding values from the app configuration
 page:
 
-- `services.flakeaway.appId`
-- `services.flakeaway.clientId`
-- `services.flakeaway.clientSecret`
-- `services.flakeaway.privateKeyFile`
-- `services.flakeaway.webhookSecret`
+- `services.flakeaway.github.appId`
+- `services.flakeaway.github.clientId`
+- `services.flakeaway.github.clientSecret`
+- `services.flakeaway.github.privateKeyFile`
+- `services.flakeaway.github.webhookSecret`
 
 All of the options are simple strings, except `privateKeyFile` which should
 be a path to the file somewhere on your server. Take care not to store the
@@ -71,12 +71,10 @@ private key unencrypted in the Nix store as that will make it readable to
 all users; if you run a binary cache server alongside Flakeaway, then it
 could also be accessed by anyone on the Internet.
 
-[create-github-app]: https://docs.github.com/en/developers/apps/building-github-apps/creating-a-github-app
-
-### Further configuration
-
-You can set `services.flakeaway.allowedUsers` to a list of user / organisation names
+You can set `services.flakeaway.github.allowedUsers` to a list of user / organisation names
 in order to limit use of your instance to only those accounts.
+
+### Concurrency
 
 Use the options under `services.flakeaway.concurrency` to control how many evaluations
 and builds can be running at the same time. By default, there will only be one of each.
