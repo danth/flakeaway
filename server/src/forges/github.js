@@ -218,6 +218,23 @@ export class GitHub {
 		return check_run.data.id
 	}
 
+	async createSkippedBuild(id, fragment) {
+		const check_run = await this.octokit.rest.checks.create({
+			owner: this.owner,
+			repo: this.repo,
+			head_sha: this.head_sha,
+			external_id: id,
+			name: `Build ${fragment}`,
+			status: 'completed',
+			conclusion: 'skipped',
+      output: {
+        title: 'Build unavailable',
+        summary: 'This fragment cannot be built as it requires a platform which is not supported.'
+			}
+		})
+		return check_run.data.id
+	}
+
 	async beginBuild(check_run_id) {
 		await this.octokit.rest.checks.update({
 			owner: this.owner,
