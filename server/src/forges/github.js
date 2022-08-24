@@ -1,5 +1,7 @@
 import fs from 'fs'
 import https from 'https'
+import path from 'path'
+import sanitizeFilename from 'sanitize-filename'
 import { Octokit } from '@octokit/rest'
 import { App, createNodeMiddleware } from '@octokit/app'
 import { createEvaluation } from '../jobs/evaluate.js'
@@ -67,11 +69,24 @@ export class GitHub {
 			repositoryIds: [ this.repo_id ],
 			permissions: { contents: 'read' },
 		})
-		return `git+https://oauth2:${token}@github.com/${this.owner}/${this.repo}.git?ref=${this.head_branch}&rev=${this.head_sha}`
+		return (
+			`git+https://oauth2:${token}@github.com/` +
+			encodeURIComponent(this.owner) + '/' +
+			encodeURIComponent(this.repo) + '.git?ref=' +
+			encodeURIComponent(this.head_branch) + '&rev=' +
+			encodeURIComponent(this.head_sha)
+		)
 	}
 
 	gcRoot(fragment) {
-		return `/var/lib/flakeaway/gc-roots/${this.owner}/${this.repo}/${this.head_branch}/${this.head_sha}/${fragment}`
+		return path.join(
+			'/var/lib/flakeaway/gc-roots',
+			sanitizeFilename(this.owner),
+			sanitizeFilename(this.repo),
+			sanitizeFilename(this.head_branch),
+			sanitizeFilename(this.head_sha),
+			sanitizeFilename(fragment)
+		)
 	}
 
 	authorize() {

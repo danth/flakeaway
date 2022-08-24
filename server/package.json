@@ -23,6 +23,7 @@
     "jsonschema": "^1.4.1",
     "lodash": "^4.17.21",
     "markdown-table": "^3.0.2",
+    "sanitize-filename": "^1.6.3",
     "uuid": "^8.3.2"
   }
 }
