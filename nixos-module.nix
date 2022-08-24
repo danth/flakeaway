@@ -132,9 +132,9 @@ in {
     assertions = [
       {
         assertion = with builtins;
-          elem "*" config.nix.allowedUsers
-          || elem "flakeaway" config.nix.allowedUsers
-          || elem "@flakeaway" config.nix.allowedUsers;
+          elem "*" config.nix.settings.allowed-users
+          || elem "flakeaway" config.nix.settings.allowed-users
+          || elem "@flakeaway" config.nix.settings.allowed-users;
         message =
           "The user `flakeaway` must be allowed to access the Nix daemon.";
       }
