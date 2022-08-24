@@ -15,7 +15,6 @@ export async function createBuild({ forge, queue, system, fragment, drvPath }) {
       check_id, fragment, drvPath
     }, {
       jobId: id,
-      priority: 2,
       removeOnFail: true,
       removeOnComplete: true,
     })

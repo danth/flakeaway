@@ -19,7 +19,6 @@ export async function createEvaluation({ forge, queue }) {
     check_id
   }, {
     jobId: id,
-    priority: 1,
     removeOnFail: true,
     removeOnComplete: true,
   })
