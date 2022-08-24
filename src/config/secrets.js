@@ -18,6 +18,7 @@ export function decryptSecret(secret) {
 
 export function initializeSecretsApi(expressApp) {
 	expressApp.get('/api/secrets_public_key', (request, response) => {
+		response.type('application/x-pem-file')
 		response.send(PUBLIC_KEY)
 	})
 }
