@@ -15,25 +15,29 @@
 
       eachSystem = inputs.utils.lib.eachSystem systems;
 
+      cli = inputs.dream2nix.lib.makeFlakeOutputs {
+        inherit systems;
+        source = ./cli;
+        config.projectRoot = ./.;
+        settings = [{ subsystemInfo.nodejs = 18; }];
+      };
+
+      server = inputs.dream2nix.lib.makeFlakeOutputs {
+        inherit systems;
+        source = ./server;
+        config.projectRoot = ./.;
+        settings = [{ subsystemInfo.nodejs = 18; }];
+      };
+
       outputSets = [
-        (inputs.dream2nix.lib.makeFlakeOutputs {
-          inherit systems;
-          source = ./cli;
-          config.projectRoot = ./.;
-          settings = [{ subsystemInfo.nodejs = 18; }];
-        })
-
-        (inputs.dream2nix.lib.makeFlakeOutputs {
-          inherit systems;
-          source = ./server;
-          config.projectRoot = ./.;
-          settings = [{ subsystemInfo.nodejs = 18; }];
-        })
-
         (eachSystem (system: {
-          packages.flakeaway-evaluator =
-            let pkgs = import inputs.nixpkgs { inherit system; };
-            in pkgs.callPackage ./evaluator {};
+          packages = {
+            flakeaway-cli = cli.packages.${system}.flakeaway-cli;
+            flakeaway-server = server.packages.${system}.flakeaway-server;
+            flakeaway-evaluator =
+              let pkgs = import inputs.nixpkgs { inherit system; };
+              in pkgs.callPackage ./evaluator {};
+          };
         }))
 
         {
