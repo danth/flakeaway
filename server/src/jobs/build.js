@@ -1,4 +1,3 @@
-import { markdownTable } from 'markdown-table'
 import { v4 as uuidv4 } from 'uuid'
 import { isSystemError } from '../log.js'
 import { buildFragment, storeFragment, getSupportedSystems } from '../nix/build.js'
