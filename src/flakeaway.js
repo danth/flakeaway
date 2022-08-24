@@ -1,5 +1,7 @@
 import Queue from 'bull'
-import { initialiseGitHub } from './forges/github.js'
+import express from 'express'
+import { initializeGitHub } from './forges/github.js'
+import { initializeSecretsApi } from './config/secrets.js'
 import { runEvaluation } from './jobs/evaluate.js'
 import { runBuild } from './jobs/build.js'
 
@@ -35,4 +37,7 @@ process.on('SIGTERM', async () => {
   process.exit(0)
 })
 
-initialiseGitHub({ evaluationQueue, buildQueue })
+const expressApp = express()
+initializeGitHub({ expressApp, evaluationQueue, buildQueue })
+initializeSecretsApi(expressApp)
+expressApp.listen(15345)

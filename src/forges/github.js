@@ -2,7 +2,6 @@ import fs from 'fs'
 import https from 'https'
 import { Octokit } from '@octokit/rest'
 import { App, createNodeMiddleware } from '@octokit/app'
-import { createServer } from 'http'
 import { createEvaluation } from '../jobs/evaluate.js'
 import { createBuild } from '../jobs/build.js'
 import { formatLog } from '../log.js'
@@ -259,7 +258,7 @@ export class GitHub {
 	}
 }
 
-export function initialiseGitHub({ evaluationQueue, buildQueue }) {
+export function initializeGitHub({ expressApp, evaluationQueue, buildQueue }) {
 	app = new App({
 		appId: process.env.GITHUB_APP_ID,
 		privateKey: fs.readFileSync(process.env.GITHUB_PRIVATE_KEY_FILE),
@@ -272,6 +271,10 @@ export function initialiseGitHub({ evaluationQueue, buildQueue }) {
 		},
 		Octokit
 	})
+
+	expressApp.use(createNodeMiddleware(app, {
+		pathPrefix: '/api/github'
+	}))
 
 	app.octokit.request('/app')
 		.then(({ data }) => console.log('authenticated to GitHub as %s', data.name))
@@ -308,6 +311,4 @@ export function initialiseGitHub({ evaluationQueue, buildQueue }) {
 			})
 		}
 	})
-
-	createServer(createNodeMiddleware(app)).listen(15345)
 }

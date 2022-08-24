@@ -1,6 +1,6 @@
 import { spawn } from 'child_process'
 import { runNix } from './nix/nix.js'
-import { decryptSecret } from './config/config.js'
+import { decryptSecret } from './config/secrets.js'
 
 const BUILD_STORE = process.env.BUILD_STORE
 
