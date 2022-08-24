@@ -3,7 +3,7 @@ import { runNix } from './nix.js'
 import { cachixPush } from '../cachix.js'
 
 const BUILD_STORE = process.env.BUILD_STORE
-const RESULT_STORES = JSON.parse(process.env.RESULT_STORES)
+const OUTPUT_STORES = JSON.parse(process.env.OUTPUT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
 
@@ -32,8 +32,8 @@ export async function buildFragment(url, fragment, drvPath, gcRoot) {
 }
 
 export async function storeFragment(id, drvPath, gcRoot, config) {
-  const configStores = config.resultStores || []
-  const stores = [...RESULT_STORES, ...configStores]
+  const configStores = config.outputStores || []
+  const stores = [...OUTPUT_STORES, ...configStores]
 
   // TODO: Propagate upload errors to the user
   for (const store of stores) {

@@ -1,7 +1,7 @@
 {
 	"type": "object",
 	"properties": {
-		"resultStores": {
+		"outputStores": {
 			"type": "array",
 			"items": {
 				"oneOf": [

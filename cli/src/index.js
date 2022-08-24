@@ -29,11 +29,11 @@ const STORES = {
 }
 
 const ACTIONS = {
-	'Add a remote store': async () => {
+	'Add an output store': async () => {
 		const { type } = await enquirer.prompt({
 			name: 'type',
 			type: 'select',
-			message: 'Which type of remote store are you adding?',
+			message: 'Which type of output store are you adding?',
 			choices: Object.keys(STORES)
 		})
 
@@ -41,25 +41,25 @@ const ACTIONS = {
 		const store = await enquirer.prompt(definition.questions)
 		store.type = definition.type
 
-		if (!config.remoteStores) { config.remoteStores = [] }
-		config.remoteStores.push(store)
+		if (!config.outputStores) { config.outputStores = [] }
+		config.outputStores.push(store)
 	},
 
-	'Remove a remote store': async () => {
-		if (!config.remoteStores) {
-			console.log('There are no remote stores configured!')
+	'Remove an output store': async () => {
+		if (!config.outputStores) {
+			console.log('There are no output stores configured!')
 			return
 		}
 
 		const { removeStore } = await enquirer.prompt({
 			name: 'removeStore',
 			type: 'select',
-			message: 'Which remote store would you like to remove?',
-			choices: config.remoteStores.map(store => store.store)
+			message: 'Which output store would you like to remove?',
+			choices: config.outputStores.map(store => store.store)
 		})
 
-		config.remoteStores = config.remoteStores.filter(store => store.store != removeStore)
-		if (!config.remoteStores.length) { delete config['remoteStores'] }
+		config.outputStores = config.outputStores.filter(store => store.store != removeStore)
+		if (!config.outputStores.length) { delete config['outputStores'] }
 	},
 
 	'Save and exit': async () => {

@@ -114,7 +114,7 @@ in {
         example = "ssh-ng://builder.example.com";
       };
 
-      result = mkOption {
+      output = mkOption {
         description = ''
           Remote stores to which finished packages will be uploaded.
 
@@ -191,10 +191,10 @@ in {
         EVALUATOR_WORKERS = toString cfg.evaluator.workers;
         EVALUATOR_WORKER_MEMORY = toString cfg.evaluator.workerMemory;
         BUILD_STORE = cfg.stores.build;
-        RESULT_STORES = builtins.toJSON (map (store: {
+        OUTPUT_STORES = builtins.toJSON (map (store: {
           type = "basic";
           inherit store;
-        }) cfg.stores.result);
+        }) cfg.stores.output);
       } // (optionalAttrs (!isNull cfg.github.allowedUsers) {
         GITHUB_ALLOWED_USERS = concatStringsSep "," cfg.github.allowedUsers;
       });
