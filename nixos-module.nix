@@ -5,7 +5,7 @@ with lib;
 
 let
   cfg = config.services.flakeaway;
-  inherit (self.packages.${pkgs.system}) flakeaway flakeaway-evaluator;
+  inherit (self.packages.${pkgs.system}) flakeaway-server flakeaway-evaluator;
 
 in {
   options.services.flakeaway = {
@@ -204,7 +204,7 @@ in {
         User = "flakeaway";
         Group = "flakeaway";
 
-        ExecStart = "${pkgs.nodejs}/bin/node ${flakeaway}/bin/flakeaway";
+        ExecStart = "${pkgs.nodejs}/bin/node ${flakeaway-server}/bin/flakeaway-server";
 
         Restart = "on-failure";
 

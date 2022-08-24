@@ -22,7 +22,11 @@
 
       outputSets = [
         (dream2nix.makeFlakeOutputs {
-          source = ./.;
+          source = ./cli;
+        })
+
+        (dream2nix.makeFlakeOutputs {
+          source = ./server;
         })
 
         (eachSystem (system: {

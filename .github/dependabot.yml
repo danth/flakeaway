@@ -4,7 +4,13 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/cli"
+    schedule:
+      interval: "daily"
+    commit-message:
+      prefix: ":arrow_up:"
+  - package-ecosystem: "npm"
+    directory: "/server"
     schedule:
       interval: "daily"
     commit-message:

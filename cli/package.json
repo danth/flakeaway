@@ -1,0 +1,22 @@
+{
+  "name": "flakeaway-cli",
+  "version": "0.0.0",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "flakeaway-cli": "src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danth/flakeaway.git"
+  },
+  "author": "Daniel Thwaites",
+  "bugs": {
+    "url": "https://github.com/danth/flakeaway/issues"
+  },
+  "homepage": "https://github.com/danth/flakeaway#readme",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "enquirer": "^2.3.6"
+  }
+}
