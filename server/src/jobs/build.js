@@ -33,13 +33,6 @@ export async function createBuild({ forge, queue, system, fragment, drvPath }) {
   }
 }
 
-export async function rerequestBuild({ forge, queue, fragment }) {
-  await createBuild({
-    forge: forge.serialize(),
-    queue, fragment
-  })
-}
-
 export async function runBuild({ job }) {
   console.log(`Running build ${job.id}`)
 

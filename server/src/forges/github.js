@@ -295,7 +295,7 @@ export function initializeGitHub({ expressApp, evaluationQueue, buildQueue }) {
 
 	app.webhooks.on('check_run.rerequested', async ({ octokit, payload }) => {
 		if (payload.check_run.name.startsWith("Build")) {
-			await rerequestBuild({
+			await createBuild({
 				forge: GitHub.create(octokit, payload),
 				queue: buildQueue,
 				/* .slice(6) removes 'Build ' from the start of the name,
