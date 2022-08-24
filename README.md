@@ -85,3 +85,17 @@ parallel. You can use `services.flakeaway.evaluator.workerMemory` to limit the a
 of memory which a single process can consume before it will be reset. By default this
 is set to 2GiB. Higher values will evaluate faster because more information can be cached
 in memory.
+
+## Per-repository settings
+
+You can set binary caches on a per-repository basis.
+To do this, run the configuration tool from the root of your repository:
+
+```sh
+nix run github:danth/flakeaway#flakeaway-cli
+```
+
+You will need to commit `.flakeaway.json` after making any changes.
+
+Any API tokens within the configuration file are encrypted, so only your
+Flakeaway server will be able to read them.
