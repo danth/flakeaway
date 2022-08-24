@@ -33,6 +33,7 @@ export async function runBuild({ job }) {
   console.log(`Running build ${job.id}`)
 
   const forge = await deserializeForge(job.data.forge)
+  const config = await forge.getConfig()
 
   await forge.beginBuild(job.data.check_id)
 
@@ -50,7 +51,7 @@ export async function runBuild({ job }) {
     await forge.finishBuild(job.data.check_id, build.logs)
     console.log(`Finished build ${job.id}`)
 
-    await storeFragment(job.id, job.data.drvPath, gcRoot)
+    await storeFragment(job.id, job.data.drvPath, gcRoot, config)
   } else if (isSystemError(build.logs)) {
     await forge.skipBuild(job.data.check_id, build.logs)
     console.log(`Skipped build ${job.id}`)

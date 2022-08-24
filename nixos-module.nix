@@ -168,7 +168,16 @@ in {
       after = [ "network-online.target" "nix-daemon.service" "redis-flakeaway.service" ];
       wantedBy = [ "default.target" ];
 
-      path = with pkgs; [ gitMinimal openssh nix flakeaway-evaluator ];
+      path = with pkgs; [ cachix gitMinimal openssh openssl nix flakeaway-evaluator ];
+
+      preStart = ''
+        if [ ! -f secrets_private_key.pem ]; then
+          openssl genrsa -out secrets_private_key.pem 2048
+        fi
+        if [ ! -f secrets_public_key.pem ]; then
+          openssl rsa -pubout -in secrets_private_key.pem -out secrets_public_key.pem
+        fi
+      '';
 
       environment = {
         GITHUB_APP_ID = cfg.github.appId;
@@ -182,7 +191,10 @@ in {
         EVALUATOR_WORKERS = toString cfg.evaluator.workers;
         EVALUATOR_WORKER_MEMORY = toString cfg.evaluator.workerMemory;
         BUILD_STORE = cfg.stores.build;
-        RESULT_STORES = builtins.toJSON cfg.stores.result;
+        RESULT_STORES = builtins.toJSON (map (store: {
+          type = "basic";
+          inherit store;
+        }) cfg.stores.result);
       } // (optionalAttrs (!isNull cfg.github.allowedUsers) {
         GITHUB_ALLOWED_USERS = concatStringsSep "," cfg.github.allowedUsers;
       });

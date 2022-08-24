@@ -1,10 +1,12 @@
 import fs from 'fs'
+import https from 'https'
 import { Octokit } from '@octokit/rest'
 import { App, createNodeMiddleware } from '@octokit/app'
 import { createServer } from 'http'
 import { createEvaluation } from '../jobs/evaluate.js'
 import { createBuild } from '../jobs/build.js'
 import { formatLog } from '../log.js'
+import { loadConfig } from '../config/config.js'
 
 // HACK: use of global variables
 var app
@@ -79,6 +81,30 @@ export class GitHub {
 			return allowedUsers.includes(this.owner)
 		}
 		return true
+	}
+
+	async getConfig() {
+		let data
+		try {
+			const response = await this.octokit.rest.repos.getContent({
+				owner: this.owner,
+				repo: this.repo,
+				ref: this.head_sha,
+				path: '.flakeaway.json',
+			})
+			data = response.data
+		} catch {
+			// File not found
+			return {}
+		}
+
+		if (data.type == 'file') {
+			const buffer = Buffer.from(data.content, data.encoding)
+			const content = buffer.toString('utf-8')
+			return loadConfig(content)
+		}
+
+		return {}
 	}
 
 	async createEvaluation(id) {

@@ -1,11 +1,11 @@
 import { promises as fs } from 'fs'
 import { runNix } from './nix.js'
+import { cachixPush } from '../cachix.js'
 
 const BUILD_STORE = process.env.BUILD_STORE
 const RESULT_STORES = JSON.parse(process.env.RESULT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
-const KEEP_GC_ROOTS = !RESULT_STORES.length
 
 export async function buildFragment(url, fragment, drvPath, gcRoot) {
   const buildOptions =
@@ -31,18 +31,28 @@ export async function buildFragment(url, fragment, drvPath, gcRoot) {
   }
 }
 
-export async function storeFragment(id, drvPath, gcRoot) {
-  for (const store of RESULT_STORES) {
-    console.log(`Copying result of ${id} to ${store}`)
-    await runNix([
-      "copy",
-      drvPath,
-      "--from", BUILD_STORE,
-      "--to", store
-    ])
+export async function storeFragment(id, drvPath, gcRoot, config) {
+  const configStores = config.resultStores || []
+  const stores = [...RESULT_STORES, ...configStores]
+
+  // TODO: Propagate upload errors to the user
+  for (const store of stores) {
+    if (store.type == 'cachix') {
+      console.log(`Copying result of ${id} to ${store.store} on Cachix`)
+      await cachixPush(store, drvPath)
+    } else {
+      console.log(`Copying result of ${id} to ${store.store}`)
+      await runNix([
+        "copy",
+        drvPath,
+        "--from", BUILD_STORE,
+        "--to", store.store
+      ])
+    }
   }
 
-  if (CREATE_GC_ROOTS && !KEEP_GC_ROOTS) {
+  // If there is at least one remote store, don't pin outputs locally
+  if (CREATE_GC_ROOTS && stores.length) {
     console.log(`Allowing result of ${id} to be garbage collected locally`)
     await fs.unlink(gcRoot)
   }
