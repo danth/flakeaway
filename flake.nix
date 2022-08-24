@@ -1,49 +1,38 @@
 {
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     dream2nix = {
       url = "github:DavHau/dream2nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    utils.url = "github:numtide/flake-utils";
   };
 
   outputs =
-    inputs:
+    { nixpkgs, dream2nix, self, ... }:
     let
-      systems = [ "x86_64-linux" "x86_64-darwin" ];
-
-      eachSystem = inputs.utils.lib.eachSystem systems;
-
-      cli = inputs.dream2nix.lib.makeFlakeOutputs {
-        inherit systems;
-        source = ./cli;
+      commonArgs = {
+        systems = [ "x86_64-linux" "x86_64-darwin" ];
         config.projectRoot = ./.;
         settings = [{ subsystemInfo.nodejs = 18; }];
       };
 
-      server = inputs.dream2nix.lib.makeFlakeOutputs {
-        inherit systems;
-        source = ./server;
-        config.projectRoot = ./.;
-        settings = [{ subsystemInfo.nodejs = 18; }];
-      };
+      cli = dream2nix.lib.makeFlakeOutputs
+        (commonArgs // { source = ./cli; });
 
-      outputSets = [
-        (eachSystem (system: {
-          packages = {
-            flakeaway-cli = cli.packages.${system}.flakeaway-cli;
-            flakeaway-server = server.packages.${system}.flakeaway-server;
-            flakeaway-evaluator =
-              let pkgs = import inputs.nixpkgs { inherit system; };
-              in pkgs.callPackage ./evaluator {};
-          };
-        }))
+      server = dream2nix.lib.makeFlakeOutputs
+        (commonArgs // { source = ./server; });
 
-        {
-          nixosModules.flakeaway = import ./nixos-module.nix inputs.self;
-        }
-      ];
+    in {
+      packages = nixpkgs.lib.genAttrs commonArgs.systems (system: {
+        flakeaway-cli = cli.packages.${system}.flakeaway-cli;
 
-    in builtins.foldl' inputs.nixpkgs.lib.recursiveUpdate {} outputSets;
+        flakeaway-server = server.packages.${system}.flakeaway-server;
+
+        flakeaway-evaluator =
+          let pkgs = import nixpkgs { inherit system; };
+          in pkgs.callPackage ./evaluator {};
+      });
+
+      nixosModules.flakeaway = import ./nixos-module.nix self;
+    };
 }
