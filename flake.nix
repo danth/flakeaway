@@ -11,7 +11,7 @@
     { nixpkgs, dream2nix, self, ... }:
     let
       commonArgs = {
-        systems = [ "x86_64-linux" "x86_64-darwin" ];
+        systems = [ "aarch64-linux" "i686-linux" "x86_64-linux" ];
         config.projectRoot = ./.;
         settings = [{ subsystemInfo.nodejs = 18; }];
       };
