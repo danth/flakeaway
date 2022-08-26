@@ -1,5 +1,4 @@
 import fs from 'fs'
-import https from 'https'
 import path from 'path'
 import sanitizeFilename from 'sanitize-filename'
 import { Octokit } from '@octokit/rest'
