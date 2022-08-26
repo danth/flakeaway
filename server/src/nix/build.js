@@ -7,6 +7,24 @@ const OUTPUT_STORES = JSON.parse(process.env.OUTPUT_STORES)
 
 const CREATE_GC_ROOTS = BUILD_STORE == "auto"
 
+function parseBuilders(systems, builders) {
+  // Builders can either be separated by semicolons or newlines
+  for (let builder of builders.split(/[;\n]/)) {
+    builder = builder.trim()
+    if (builder == '') { continue }
+
+    if (builder.startsWith('@')) {
+      // @ indicates an import of another file
+      const importedBuilders = fs.readFileSync(builder.slice(1))
+      parseBuilders(systems, importedBuilders)
+    } else {
+      // The second space separated field is a comma separated list of systems
+      const builderSystems = builder.split(/\s+/)[1].split(',')
+      systems.push(...builderSystems)
+    }
+  }
+}
+
 export async function getSupportedSystems() {
   const systems = []
 
@@ -15,9 +33,9 @@ export async function getSupportedSystems() {
 
   systems.push(config.system.value)
   systems.push(...config['extra-platforms'].value)
+  parseBuilders(systems, config.builders.value)
 
-  // TODO: Detect systems of remote builders
-
+  // This list may contain duplicates
   return systems
 }
 
