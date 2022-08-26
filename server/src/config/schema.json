@@ -1,29 +1,29 @@
 {
-	"type": "object",
-	"properties": {
-		"outputStores": {
-			"type": "array",
-			"items": {
-				"oneOf": [
-					{
-						"type": "object",
-						"required": ["type", "store"],
-						"properties": {
-							"type": { "type": "string", "enum": ["basic"] },
-							"store": { "type": "string" }
-						}
-					},
-					{
-						"type": "object",
-						"required": ["type", "store", "authToken"],
-						"properties": {
-							"type": { "type": "string", "enum": ["cachix"] },
-							"store": { "type": "string" },
-							"authToken": { "type": "string" }
-						}
-					}
-				]
-			}
-		}
-	}
+  "type": "object",
+  "properties": {
+    "outputStores": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["type", "store"],
+            "properties": {
+              "type": { "type": "string", "enum": ["basic"] },
+              "store": { "type": "string" }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["type", "store", "authToken"],
+            "properties": {
+              "type": { "type": "string", "enum": ["cachix"] },
+              "store": { "type": "string" },
+              "authToken": { "type": "string" }
+            }
+          }
+        ]
+      }
+    }
+  }
 }

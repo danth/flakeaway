@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { spawn } from "child_process";
 
 /*
 Evaluate all of the outputs of the flake at `url` simultaneously.
@@ -17,32 +17,34 @@ export async function evaluateJobs(url, jobCallback) {
       "flakeaway-evaluator",
       [
         "--verbose",
-        "--workers", process.env.EVALUATOR_WORKERS,
-        "--max-memory-size", process.env.EVALUATOR_WORKER_MEMORY,
-        url
+        "--workers",
+        process.env.EVALUATOR_WORKERS,
+        "--max-memory-size",
+        process.env.EVALUATOR_WORKER_MEMORY,
+        url,
       ],
       {
         detached: true, // Don't propagate SIGTERM, to allow graceful shutdown
-        stdio: ['pipe', 'pipe', 'inherit'],
-        env: process.env
+        stdio: ["pipe", "pipe", "inherit"],
+        env: process.env,
       }
-    )
+    );
 
-    subprocess.once('error', reject)
+    subprocess.once("error", reject);
 
-    subprocess.stdout.setEncoding('utf8')
+    subprocess.stdout.setEncoding("utf8");
 
-    const callbacks = []
-    subprocess.stdout.on('data', data => {
-      const lines = data.trim().split('\n')
+    const callbacks = [];
+    subprocess.stdout.on("data", (data) => {
+      const lines = data.trim().split("\n");
       for (const line of lines) {
-        const parsed = JSON.parse(line)
-        callbacks.push(jobCallback(parsed))
+        const parsed = JSON.parse(line);
+        callbacks.push(jobCallback(parsed));
       }
-    })
+    });
 
-    subprocess.once('close', exitCode => {
-      Promise.all(callbacks).then(() => resolve(exitCode))
-    })
-  })
+    subprocess.once("close", (exitCode) => {
+      Promise.all(callbacks).then(() => resolve(exitCode));
+    });
+  });
 }
