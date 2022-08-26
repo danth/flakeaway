@@ -46,7 +46,7 @@ export class GitHub {
 	static async deserialize(serialized) {
 		const forge = new GitHub()
 
-  	forge.octokit = await app.getInstallationOctokit(serialized.installation_id)
+		forge.octokit = await app.getInstallationOctokit(serialized.installation_id)
 
 		forge.owner = serialized.owner
 		forge.repo = serialized.repo
