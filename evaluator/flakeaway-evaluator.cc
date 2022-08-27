@@ -109,15 +109,10 @@ static Value *topLevelValue(EvalState &state, Bindings &autoArgs) {
 /* The fields of a derivation that are printed in json form */
 struct Drv {
     std::string name;
-    std::string system;
     std::string drvPath;
 
     Drv(EvalState &state, DrvInfo &drvInfo) {
         name = drvInfo.queryName();
-
-        if (drvInfo.querySystem() == "unknown")
-            throw EvalError("derivation must have a 'system' attribute");
-        system = drvInfo.querySystem();
 
         auto localStore = state.store.dynamic_pointer_cast<LocalFSStore>();
         drvPath = localStore->printStorePath(drvInfo.requireDrvPath());
@@ -127,7 +122,6 @@ struct Drv {
 static void to_json(nlohmann::json &json, const Drv &drv) {
     json = nlohmann::json{
         {"name", drv.name},
-        {"system", drv.system},
         {"drvPath", drv.drvPath},
     };
 }
