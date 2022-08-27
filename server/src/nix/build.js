@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import { isSubset } from "@blakek/set-operations";
 import { runNix } from "./nix.js";
 import { cachixPush } from "../cachix.js";
 
@@ -22,23 +23,42 @@ function parseBuilders(systems, builders) {
     } else {
       // The second space separated field is a comma separated list of systems
       const builderSystems = builder.split(/\s+/)[1].split(",");
-      systems.push(...builderSystems);
+      systems.add(...builderSystems);
     }
   }
 }
 
 export async function getSupportedSystems() {
-  const systems = [];
+  const systems = new Set();
 
   const { stdout } = await runNix(["show-config", "--json"]);
   const config = JSON.parse(stdout);
 
-  systems.push(config.system.value);
-  systems.push(...config["extra-platforms"].value);
+  systems.add(config.system.value);
+  systems.add(...config["extra-platforms"].value);
   parseBuilders(systems, config.builders.value);
 
-  // This list may contain duplicates
   return systems;
+}
+
+export async function getRequiredSystems(drvPath) {
+  const { stdout } = await runNix(["show-derivation", "--recursive", drvPath]);
+  const derivations = JSON.parse(stdout);
+
+  const systems = new Set();
+  for (const derivation of Object.values(derivations)) {
+    if (derivation.system != "builtin") {
+      systems.add(derivation.system);
+    }
+  }
+  return systems;
+}
+
+export async function isSupportedSystem(drvPath) {
+  const [requiredSystems, supportedSystems] =
+    await Promise.all([getRequiredSystems(drvPath), getSupportedSystems()]);
+
+  return isSubset(requiredSystems, supportedSystems);
 }
 
 export async function buildFragment(url, fragment, drvPath, gcRoot) {

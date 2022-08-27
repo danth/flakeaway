@@ -1,13 +1,12 @@
 import { v4 as uuidv4 } from "uuid";
 import { isSystemError } from "../log.js";
-import { buildFragment, storeFragment, getSupportedSystems } from "../nix/build.js";
+import { buildFragment, storeFragment, isSupportedSystem } from "../nix/build.js";
 import { deserializeForge } from "../forges.js";
 
-export async function createBuild({ forge, queue, system, fragment, drvPath }) {
+export async function createBuild({ forge, queue, fragment, drvPath }) {
   const id = uuidv4();
 
-  const supportedSystems = await getSupportedSystems();
-  if (supportedSystems.includes(system) || !system) {
+  if (!drvPath || await isSupportedSystem(drvPath)) {
     const check_id = await forge.createBuild(id, fragment);
 
     await queue.add(
@@ -26,10 +25,7 @@ export async function createBuild({ forge, queue, system, fragment, drvPath }) {
 
     console.log(`Created build ${id}`);
   } else {
-    // We know that we can't build the toplevel derivation, so skip the job
-    // immediately. Sometimes derivations depend on builds on other systems,
-    // in that case, we will run the build until an error is detected.
-    // TODO: Recursively scan derivations to predict unsupported systems.
+    // We know that we don't support the build, so skip the job immediately.
     await forge.createSkippedBuild(id, fragment);
 
     console.log(`Created skipped build ${id}`);

@@ -62,7 +62,6 @@ export async function runEvaluation({ buildQueue, job }) {
       await createBuild({
         forge,
         queue: buildQueue,
-        system: evaluatedJob.system,
         fragment: evaluatedJob.attr,
         drvPath: evaluatedJob.drvPath,
       });
