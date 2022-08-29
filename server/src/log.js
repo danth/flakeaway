@@ -6,17 +6,21 @@ export function removeANSI(log) {
 }
 
 const SYSTEM_ERROR = /^error: a '\S+' with features {.*} is required to build '\S+'/m;
-export function isSystemError(log) {
-  return SYSTEM_ERROR.test(removeANSI(log));
+export function isSystemError(logs) {
+  if (!logs) return false;
+
+  return SYSTEM_ERROR.test(removeANSI(logs.log));
 }
 
-export function formatLog(log) {
-  if (!log) return undefined;
+export function formatLog(logs) {
+  if (!logs) return undefined;
+  if (!logs.log.length) return undefined;
 
-  const truncatedMessage = "Earlier lines of this build log were truncated.\n";
-  const limit = 65535 - 8 - truncatedMessage.length;
+  const title = `### Build log for ${logs.drv}\n`;
+  const truncatedMessage = "Earlier lines of this log were truncated.\n";
+  const limit = 65535 - 7 - truncatedMessage.length - title.length;
 
-  const logLines = removeANSI(log).split("\n");
+  const logLines = removeANSI(logs.log).split("\n");
 
   var totalLength = 0;
   const truncatedLines = _.takeRightWhile(logLines, (line) => {
@@ -28,5 +32,5 @@ export function formatLog(log) {
 
   const prefix = truncatedLines.length < logLines.length ? truncatedMessage : "";
 
-  return prefix + "```\n" + truncatedLog + "\n```";
+  return title + prefix + "```\n" + truncatedLog + "```";
 }

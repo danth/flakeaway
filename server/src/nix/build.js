@@ -79,10 +79,25 @@ export async function buildFragment(url, fragment, drvPath, gcRoot) {
     ...linkOptions,
   ]);
 
-  return {
-    success: build.exitCode == 0,
-    logs: build.stderr,
-  };
+  if (build.exitCode == 0) {
+    const { stdout } = await runNix(["log", drvPath]);
+    return {
+      success: true,
+      logs: { drv: drvPath, log: stdout }
+    };
+  } else {
+    const match = build.stderr.match(/builder for '(\S+)' failed/)
+    if (match) {
+      const failedDrv = match[1]
+      const { stdout } = await runNix(["log", failedDrv]);
+      return {
+        success: false,
+        logs: { drv: failedDrv, log: stdout }
+      };
+    } else {
+      return { success: false, logs: null };
+    }
+  }
 }
 
 export async function storeFragment(id, drvPath, gcRoot, config) {
