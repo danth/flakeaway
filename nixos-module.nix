@@ -95,7 +95,7 @@ in {
     stores = {
       build = mkOption {
         description = ''
-          Remote store used during the build itself.
+          Store used during the build itself.
 
           By default, builds run on the same machine as Flakeaway.
           A remote store is one way to offload building to another machine.
@@ -103,7 +103,8 @@ in {
           for an example of how this works.
 
           Setting a remote store will prevent garbage collection roots from
-          being created.
+          being created in the local Nix store, even if you configure it as an
+          output store.
 
           Note that <literal>--eval-store</literal> is always set to
           <literal>auto</literal>, so the store of the Flakeaway server
@@ -116,10 +117,10 @@ in {
 
       output = mkOption {
         description = ''
-          Remote stores to which finished packages will be uploaded.
+          Stores to which finished packages will be uploaded.
 
-          Adding at least one remote store will prevent garbage collection
-          roots from being created in the local Nix store.
+          If you want garbage collection roots to be created in the local Nix
+          store, add <literal>"auto"</literal> to this list.
         '';
         type = with types; listOf str;
         default = [];

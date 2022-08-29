@@ -89,19 +89,22 @@ export async function storeFragment(id, drvPath, gcRoot, config) {
   const configStores = config.outputStores || [];
   const stores = [...OUTPUT_STORES, ...configStores];
 
+  let keepRoot = false;
+
   // TODO: Propagate upload errors to the user
   for (const store of stores) {
     if (store.type == "cachix") {
       console.log(`Copying result of ${id} to ${store.store} on Cachix`);
       await cachixPush(store, drvPath);
     } else {
+      if (store.store == "auto") { keepRoot = true; }
+
       console.log(`Copying result of ${id} to ${store.store}`);
       await runNix(["copy", drvPath, "--from", BUILD_STORE, "--to", store.store]);
     }
   }
 
-  // If there is at least one remote store, don't pin outputs locally
-  if (CREATE_GC_ROOTS && stores.length) {
+  if (CREATE_GC_ROOTS && !keepRoot) {
     console.log(`Allowing result of ${id} to be garbage collected locally`);
     await fs.unlink(gcRoot);
   }
