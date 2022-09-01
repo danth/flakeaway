@@ -55,7 +55,7 @@ export async function runBuild({ job }) {
     console.log(`Finished build ${job.id}`);
 
     await storeFragment(job.id, job.data.drvPath, gcRoot, config);
-  } else if (isSystemError(build.logs)) {
+  } else if (build.logs && isSystemError(build.logs.log)) {
     await forge.skipBuild(job.data.check_id, build.logs);
     console.log(`Skipped build ${job.id}`);
   } else {

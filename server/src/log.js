@@ -6,10 +6,8 @@ export function removeANSI(log) {
 }
 
 const SYSTEM_ERROR = /^error: a '\S+' with features {.*} is required to build '\S+'/m;
-export function isSystemError(logs) {
-  if (!logs) return false;
-
-  return SYSTEM_ERROR.test(removeANSI(logs.log));
+export function isSystemError(log) {
+  return SYSTEM_ERROR.test(removeANSI(log));
 }
 
 export function formatLog(logs) {
