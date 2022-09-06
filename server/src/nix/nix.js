@@ -2,7 +2,7 @@ import { spawn } from "child_process";
 
 export async function runNix(args, environment = {}) {
   return new Promise((resolve, reject) => {
-    const subprocess = spawn("nix", ["-v", "--allow-import-from-derivation", ...args], {
+    const subprocess = spawn("nix", ["--allow-import-from-derivation", ...args], {
       detached: true, // Don't propagate SIGTERM, to allow graceful shutdown
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env, ...environment },
