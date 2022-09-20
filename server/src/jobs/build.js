@@ -1,3 +1,4 @@
+import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { isSystemError } from "../log.js";
 import { buildFragment, storeFragment, isSupportedSystem } from "../nix/build.js";
@@ -36,25 +37,24 @@ export async function runBuild({ job }) {
   console.log(`Running build ${job.id}`);
 
   const forge = await deserializeForge(job.data.forge);
-  const config = await forge.getConfig();
 
   await forge.beginBuild(job.data.check_id);
 
-  const gcRoot = forge.gcRoot(job.data.fragment);
+  const outputPath = forge.outputPath(job.data.fragment);
 
   console.log(`Building ${job.id}`);
   const build = await buildFragment(
     await forge.flake(),
     job.data.fragment,
     job.data.drvPath,
-    gcRoot
+    outputPath
   );
 
   if (build.success) {
     await forge.finishBuild(job.data.check_id, build.logs);
     console.log(`Finished build ${job.id}`);
 
-    await storeFragment(job.id, job.data.drvPath, gcRoot, config);
+    await storeFragment(job.id, job.data.drvPath, outputPath, forge);
   } else if (build.logs && isSystemError(build.logs.log)) {
     await forge.skipBuild(job.data.check_id, build.logs);
     console.log(`Skipped build ${job.id}`);

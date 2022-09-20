@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import path from "path";
 import { isSubset } from "@blakek/set-operations";
 import { runNix } from "./nix.js";
 import { cachixPush } from "../cachix.js";
@@ -61,13 +62,13 @@ export async function isSupportedSystem(drvPath) {
   return isSubset(requiredSystems, supportedSystems);
 }
 
-export async function buildFragment(url, fragment, drvPath, gcRoot) {
+export async function buildFragment(url, fragment, drvPath, outputPath) {
   const buildOptions =
     // Some remote stores don't support building drvs directly
     // Re-runs will also require re-evaluation since we don't know the drv path
     drvPath && BUILD_STORE == "auto" ? [drvPath] : [`${url}#${fragment}`];
 
-  const linkOptions = CREATE_GC_ROOTS ? ["--out-link", gcRoot] : ["--no-link"];
+  const linkOptions = CREATE_GC_ROOTS ? ["--out-link", outputPath] : ["--no-link"];
 
   const build = await runNix([
     "build",
@@ -100,7 +101,8 @@ export async function buildFragment(url, fragment, drvPath, gcRoot) {
   }
 }
 
-export async function storeFragment(id, drvPath, gcRoot, config) {
+export async function storeFragment(id, drvPath, outputPath, forge) {
+  const config = await forge.getConfig();
   const configStores = config.outputStores || [];
   const stores = [...OUTPUT_STORES, ...configStores];
 
@@ -119,8 +121,42 @@ export async function storeFragment(id, drvPath, gcRoot, config) {
     }
   }
 
-  if (CREATE_GC_ROOTS && !keepRoot) {
-    console.log(`Allowing result of ${id} to be garbage collected locally`);
-    await fs.unlink(gcRoot);
+  if (CREATE_GC_ROOTS) {
+    if (keepRoot) {
+      await cleanupOutputs(forge);
+    } else {
+      console.log(`Allowing result of ${id} to be garbage collected locally`);
+      await fs.unlink(outputPath);
+    }
   }
+}
+
+async function cleanupOutputs(forge) {
+  console.log(`Cleaning up old outputs for ${forge.pseudoFlake()}`);
+
+	const heads = await forge.listHeads();
+	const directory = forge.outputDirectory();
+
+	for (const branch of await fs.readdir(directory)) {
+    let branchDirectory = path.join(directory, branch);
+		if (!(branch in heads)) {
+      console.log(`Removing deleted branch: ${branch}`);
+			await fs.rm(
+        branchDirectory,
+        { recursive: true }
+      );
+		} else {
+	    for (const commit of await fs.readdir(branchDirectory)) {
+        if (commit != heads[branch]) {
+          console.log(`Removing old commit: ${branch}/${commit}`);
+          await fs.rm(
+            path.join(branchDirectory, commit),
+            { recursive: true }
+          );
+        }
+      }
+    }
+	}
+
+  console.log("Cleanup finished")
 }

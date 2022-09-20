@@ -80,15 +80,21 @@ export class GitHub {
     );
   }
 
-  gcRoot(fragment) {
+  outputDirectory() {
     return path.join(
-      "/var/lib/flakeaway/gc-roots",
+      "/var/lib/flakeaway/outputs/github",
       sanitizeFilename(this.owner),
-      sanitizeFilename(this.repo),
+      sanitizeFilename(this.repo)
+    )
+  }
+
+  outputPath(fragment) {
+    return path.join(
+      this.outputDirectory(),
       sanitizeFilename(this.head_branch),
       sanitizeFilename(this.head_sha),
       sanitizeFilename(fragment)
-    );
+    )
   }
 
   authorize() {
@@ -97,6 +103,31 @@ export class GitHub {
       return allowedUsers.includes(this.owner);
     }
     return true;
+  }
+
+  async listHeads() {
+    const all_branches = {};
+
+    let page = 1;
+    const per_page = 50;
+    while (true) {
+      const response = await this.octokit.rest.repos.listBranches({
+        owner: this.owner,
+        repo: this.repo,
+        page,
+        per_page
+      });
+      page += 1;
+
+      for (const branch of response.data) {
+        all_branches[branch.name] = branch.commit.sha;
+      }
+
+      if (response.data.length < per_page) {
+        // Assume there are no more pages once we recieve an incomplete page.
+        return all_branches;
+      }
+    }
   }
 
   async getConfig() {
