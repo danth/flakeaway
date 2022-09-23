@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "module": "es2022",
+    "moduleResolution": "node16",
+    "target": "es2022",
+    "allowJs": true,
+    "noEmitOnError": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  },
+  "include": ["./src/**/*"]
+}
