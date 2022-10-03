@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import sanitizeFilename from "sanitize-filename";
 import { isSubset } from "@blakek/set-operations";
 import { runNix } from "./nix.js";
 import { cachixPush } from "../cachix.js";
@@ -135,11 +136,21 @@ async function cleanupOutputs(forge) {
   console.log(`Cleaning up old outputs for ${forge.pseudoFlake()}`);
 
 	const heads = await forge.listHeads();
+
+  // Filenames are sanitized so we must also sanitize the list of
+  // existing branches to avoid existing branches being incorrectly
+  // deleted. See #30.
+  const sanitizedHeads = {};
+  for (const branch of Object.keys(heads)) {
+    const sanitizedBranch = sanitizeFilename(branch);
+    sanitizedHeads[sanitizedBranch] = heads[branch];
+  }
+
 	const directory = forge.outputDirectory();
 
 	for (const branch of await fs.readdir(directory)) {
     let branchDirectory = path.join(directory, branch);
-		if (!(branch in heads)) {
+		if (!(branch in sanitizedHeads)) {
       console.log(`Removing deleted branch: ${branch}`);
 			await fs.rm(
         branchDirectory,
@@ -147,7 +158,7 @@ async function cleanupOutputs(forge) {
       );
 		} else {
 	    for (const commit of await fs.readdir(branchDirectory)) {
-        if (commit != heads[branch]) {
+        if (commit != sanitizedHeads[branch]) {
           console.log(`Removing old commit: ${branch}/${commit}`);
           await fs.rm(
             path.join(branchDirectory, commit),
