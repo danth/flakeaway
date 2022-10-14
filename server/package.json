@@ -18,7 +18,7 @@
   "dependencies": {
     "@blakek/set-operations": "^1.0.0",
     "@octokit/app": "^13.0.11",
-    "@octokit/rest": "^19.0.4",
+    "@octokit/rest": "^19.0.5",
     "bull": "^4.10.1",
     "express": "^4.18.2",
     "jsonschema": "^1.4.1",
